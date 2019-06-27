@@ -1,0 +1,14 @@
+Package: scandal
+Title: A framework for single-cell analysis
+Version: 0.0.0.9000
+Authors@R: 
+    person(given = "Avishay",
+           family = "Spitzer",
+           role = c("aut", "cre"),
+           email = "avishay.spitzer@weizmann.ac.il")
+Description: Scandal (Single Cell ANalysis Done AwesomeLy) is a framework for single-cell analysis focusing on cancer-related analyses.
+License: GPL-3
+Encoding: UTF-8
+LazyData: true
+Suggests: 
+    testthat
