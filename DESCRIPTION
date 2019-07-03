@@ -12,3 +12,20 @@ Encoding: UTF-8
 LazyData: true
 Suggests: 
     testthat
+Imports: 
+    S4Vectors,
+    stats,
+    SingleCellExperiment,
+    utils,
+    dplyr,
+    rlang,
+    tidyr,
+    Matrix,
+    tibble,
+    roxygen2,
+    ggplot2,
+    scales,
+    reshape2,
+    patchwork,
+    Rtsne,
+    umap
