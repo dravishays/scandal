@@ -12,7 +12,7 @@ Encoding: UTF-8
 LazyData: true
 Suggests: 
     testthat
-Imports: 
+Depends: 
     S4Vectors,
     stats,
     SingleCellExperiment,
@@ -30,3 +30,8 @@ Imports:
     Rtsne,
     umap,
     methods
+RoxygenNote: 6.1.1
+Collate: 
+    'AllGenerics.R'
+    'AllClasses.R'
+    'preprocess.R'

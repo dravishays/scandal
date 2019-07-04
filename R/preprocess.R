@@ -19,9 +19,8 @@
 scandal_preprocess <- function(object, preproc_config_list, forced_genes_set = NULL, use_housekeeping_filter = FALSE, verbose = FALSE) {
 
   stopifnot(!is_scandal_object(object),
-            (is.null(forced_genes_set) | is.list(forced_genes_set)),
-            is.logical(use_housekeeping_filter),
-            is.logical(aggregate_res))
+            (is.null(forced_genes_set) | is.vector(forced_genes_set)),
+            is.logical(use_housekeeping_filter))
 
   stopifnot(!is.null(preproc_config_list),
             is.list(preproc_config_list),
@@ -30,7 +29,7 @@ scandal_preprocess <- function(object, preproc_config_list, forced_genes_set = N
 
   for(sname in sampleNames(object)) {
     sconf <- preproc_config_list[[sname]]
-    sdata <- ScandalDataSet(assays = list(tpm = tpm(object)[, subset_cells(colnames(object), sname), drop = FALSE]), identifier = sname, preprocConfig = sconf)
+    sdata <- ScandalDataSet(assays = list(tpm = tpm(object)[, .subset_cells(colnames(object), sname), drop = FALSE]), identifier = sname, preprocConfig = sconf)
 
     parentNode(sdata) <- object
 
@@ -46,16 +45,17 @@ scandal_preprocess <- function(object, preproc_config_list, forced_genes_set = N
 preprocess <- function(x, complexity_cutoff, housekeeping_cutoff, expression_cutoff, log_base, scaling_factor,
                        sample_id = "", cell_ids = NULL, forced_genes_set = NULL, use_housekeeping_filter = FALSE, verbose = FALSE) {
 
-  stopifnot(!is_valid_assay(x),
-            (is.vecrot(complexity_cutoff) & is.numeric(complexity_cutoff)),
+  stopifnot(is_valid_assay(x),
+            (is.vector(complexity_cutoff) & is.numeric(complexity_cutoff)),
             is.numeric(housekeeping_cutoff),
             is.numeric(expression_cutoff),
             is.numeric(log_base),
             is.numeric(scaling_factor),
             (is.null(forced_genes_set) | is.vector(forced_genes_set)),
             (is.null(cell_ids) | is.vector(cell_ids)),
-            is.logical(use_housekeeping_filter),
-            is.logical(aggregate_res))
+            is.logical(use_housekeeping_filter))
+
+  x <- as.matrix(x)
 
   if (isTRUE(verbose))
     message("Preprocessing sample ", sample_id, "...")
@@ -112,6 +112,8 @@ preprocess <- function(x, complexity_cutoff, housekeeping_cutoff, expression_cut
   if (isTRUE(verbose))
     message("Preprocessing done!")
 
+  x <- as(x, "Matrix")
+
   return (x)
 }
 
@@ -138,7 +140,7 @@ reverse_log_transform <- function(x, log_base = 2, scaling_factor = 1, pseudo_co
 #' @export
 compute_complexity <- function(x, return_sorted = FALSE, cell_subset = NULL, verbose = FALSE) {
 
-  stopifnot(!is_valid_assay(x), is.logical(return_sorted), (is.null(cell_subset) | is.vector(cell_subset)))
+  stopifnot(is_valid_assay(x), is.logical(return_sorted), (is.null(cell_subset) | is.vector(cell_subset)))
 
   if (!is.null(cell_subset))
     x <- x[, cell_subset]
@@ -155,7 +157,7 @@ compute_complexity <- function(x, return_sorted = FALSE, cell_subset = NULL, ver
 #' @export
 compute_central_tendency <- function(x, by = "row", method = "mean", log_transform_res = FALSE, genes_subset = NULL, verbose = FALSE) {
 
-  stopifnot(!is_valid_assay(x), by %in% c("row", "col"), is.logical(log_transform_res), (is.null(genes_subset) | is.vector(genes_subset)))
+  stopifnot(is_valid_assay(x), by %in% c("row", "col"), is.logical(log_transform_res), (is.null(genes_subset) | is.vector(genes_subset)))
 
   if (!is.null(genes_subset))
     x <- x[rownames(x) %in% genes_subset, ]
@@ -173,7 +175,7 @@ compute_central_tendency <- function(x, by = "row", method = "mean", log_transfo
 #' @export
 filter_low_quality_cells <- function(x, complexity_cutoff, verbose = FALSE) {
 
-  stopifnot(!is_valid_assay(x), is.numeric(complexity_cutoff), complexity_cutoff > 0)
+  stopifnot(is_valid_assay(x), is.numeric(complexity_cutoff), complexity_cutoff > 0)
 
   d <- compute_complexity(x, return_sorted = FALSE, cell_subset = NULL, verbose = verbose)
 
@@ -193,7 +195,7 @@ filter_low_quality_cells <- function(x, complexity_cutoff, verbose = FALSE) {
 #' @export
 filter_low_housekeeping_cells <- function(x, housekeeping_cutoff, verbose = FALSE) {
 
-  stopifnot(!is_valid_assay(x), is.numeric(housekeeping_cutoff), housekeeping_cutoff > 0)
+  stopifnot(is_valid_assay(x), is.numeric(housekeeping_cutoff), housekeeping_cutoff > 0)
 
   hk_mean_exp <- compute_central_tendency(x, by = "col", method = "mean", log_transform_res = TRUE, genes_subset = HOUSEKEEPING_GENES_LIST, verbose = verbose)
 
@@ -212,7 +214,7 @@ filter_low_housekeeping_cells <- function(x, housekeeping_cutoff, verbose = FALS
 #' @export
 filter_lowly_expressed_genes <- function(x, expression_cutoff, forced_genes_set = NULL, verbose = FALSE) {
 
-  stopifnot(!is_valid_assay(x), is.numeric(expression_cutoff), expression_cutoff > 0, (is.null(forced_genes_set) | is.vector(forced_genes_set)))
+  stopifnot(is_valid_assay(x), is.numeric(expression_cutoff), expression_cutoff > 0, (is.null(forced_genes_set) | is.vector(forced_genes_set)))
 
   gene_counts <- compute_central_tendency(x, by = "row", method = "mean", log_transform_res = TRUE, genes_subset = forced_genes_set, verbose = verbose)
 
@@ -253,19 +255,51 @@ filter_lowly_expressed_genes <- function(x, expression_cutoff, forced_genes_set 
 #' @export
 center_matrix <- function(x, by = "row", method = "mean", verbose = FALSE) {
 
-  stopifnot(!is_valid_assay(x), by %in% c("row", "col"), method %in% c("mean", "median"))
+  stopifnot(is_valid_assay(x), by %in% c("row", "col"), method %in% c("mean", "median"))
 
-  if (by == "row")
-    x <- t(t(x) - compute_central_tendency(x, by = "row", method = method, log_transform_res = FALSE, genes_subset = NULL, verbose = verbose))
-  else
-    x <- x - compute_central_tendency(x, by = by, method = method, log_transform_res = FALSE, genes_subset = NULL, verbose = verbose)
+  x <- t(t(x) - compute_central_tendency(x, by = by, method = method, log_transform_res = FALSE, genes_subset = NULL, verbose = verbose))
 
   return (x)
 }
 
-subset_cells <- function(cell_names, sample_name) cell_names[which(.cell2tumor(cell_names) %in% sample_name)]
+#' @export
+load_tpm_data <- function(filename, drop_cols = 2, rownames_col = 1, excluded_samples = NULL, verbose = FALSE) {
 
-.cell2tumor <- function(cell_ids) gsub("-.*", "", cell_ids)
+  stopifnot(is.character(filename), base::file.exists(filename))
+  stopifnot(is.integer(drop_cols), is.integer(rownames_col), drop_cols > 0, rownames_col > 0)
+  stopifnot(is.null(excluded_samples) | (is.vector(excluded_samples) & is.character(excluded_samples)))
+
+  if (isTRUE(verbose))
+    message("Loading TPM data from ", filename)
+
+  tpm_data <- utils::read.delim(filename, header = TRUE, sep = '\t', stringsAsFactors = FALSE)
+
+  #tpm_data[, rownames_col][c(11570, 11573)] <- c("MARCH1", "MARCH2")
+  rownames(tpm_data) <- tpm_data[, rownames_col]
+
+  tpm_data <- tpm_data[, -seq_len(drop_cols)]
+
+  colnames(tpm_data) <- base::gsub("\\.", "-", colnames(tpm_data))
+
+  if (isTRUE(verbose))
+    message("Loaded dataset with ", nrow(tpm_data), " rows and ", ncol(tpm_data), " columns")
+
+  if (!is.null(excluded_samples)) {
+
+    tpm_data <- tpm_data[, !(.cell2tumor(colnames(tpm_data)) %in% excluded_samples)]
+
+    if (isTRUE(verbose))
+      message("Excluding ", length(excluded_samples), " samples from dataset which now contains ", nrow(tpm_data), " rows and ", ncol(tpm_data), " columns")
+  }
+
+  tpm_data <- methods::as(tpm_data, "Matrix")
+
+  return (tpm_data)
+}
+
+.subset_cells <- function(cell_names, sample_name) cell_names[which(.cell2tumor(cell_names) %in% sample_name)]
+
+.cell2tumor <- function(cell_ids) base::gsub("-.*", "", cell_ids)
 
 .scandal_preprocess <- function(object, cell_ids = NULL, forced_genes_set = NULL, use_housekeeping_filter = FALSE, verbose = FALSE) {
 
