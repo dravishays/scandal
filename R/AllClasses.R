@@ -1,10 +1,16 @@
+#' @include AllGenerics.R
+NULL
+
 
 ### =========================================================================
 ### ScandalDataSet objects (start)
 ### -------------------------------------------------------------------------
 ###
 
-setClassUnion("ScandalDataSetOrNULL", c("ScandalDataSet", "NULL"))
+#setClassUnion("ScandalDataSetOrNULL", c("ScandalDataSet", "NULL"))
+setClassUnion("ScandalDataSetOrNULL", c("NULL"))
+
+#' @importClassesFrom Matrix Matrix
 setClassUnion("MatrixOrNULL", c("Matrix", "matrix", "NULL"))
 
 #'
@@ -15,6 +21,8 @@ setClassUnion("MatrixOrNULL", c("Matrix", "matrix", "NULL"))
 #'
 #' @author Avishay Spitzer
 #'
+#' @importClassesFrom SingleCellExperiment SingleCellExperiment
+#' @importClassesFrom S4Vectors SimpleList
 #' @export
 setClass("ScandalDataSet",
          slots = c(childNodes = "SimpleList",
@@ -22,6 +30,8 @@ setClass("ScandalDataSet",
                    unprocessedData = "MatrixOrNULL"),
          contains = "SingleCellExperiment"
 )
+
+setIs("ScandalDataSet", "ScandalDataSetOrNULL")
 
 ### - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 ### Constructor
@@ -74,7 +84,7 @@ ScandalDataSet <- function(..., childNodes = SimpleList(), parentNode = NULL, id
 ### Validity
 ###
 
-setValidity2("ScandalDataSet", function(object) {
+setValidity("ScandalDataSet", function(object) {
 
   if (is.null(int_colData(object)$Scandal))
     return (sprintf("int_colData$Scandal cannot be set to NULL"))
@@ -108,11 +118,13 @@ setValidity2("ScandalDataSet", function(object) {
 ### Getters and setters.
 ###
 
+#' @include AllGenerics.R
 #' @export
 setMethod("logtpm", "ScandalDataSet",   function(object, ...) {
   return (assay(object, i = "logtpm", ...))
 })
 
+#' @include AllGenerics.R
 #' @export
 setReplaceMethod("logtpm", c("ScandalDataSet", "ANY"),   function(object, ..., value) {
   assay(object, i = "logtpm", ...) <- value

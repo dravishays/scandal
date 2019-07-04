@@ -8,7 +8,6 @@
 #' @param preproc_config_list
 #' @param forced_genes_set
 #' @param use_housekeeping_filter
-#' @param aggregate_res
 #'
 #' @details
 #'
@@ -17,7 +16,7 @@
 #' @author Avishay Spitzer
 #'
 #' @export
-scandal_preprocess <- function(object, preproc_config_list, forced_genes_set = NULL, use_housekeeping_filter = FALSE, aggregate_res = TRUE, verbose = FALSE) {
+scandal_preprocess <- function(object, preproc_config_list, forced_genes_set = NULL, use_housekeeping_filter = FALSE, verbose = FALSE) {
 
   stopifnot(!is_scandal_object(object),
             (is.null(forced_genes_set) | is.list(forced_genes_set)),
@@ -33,6 +32,7 @@ scandal_preprocess <- function(object, preproc_config_list, forced_genes_set = N
     sconf <- preproc_config_list[[sname]]
     sdata <- ScandalDataSet(assays = list(tpm = tpm(object)[, subset_cells(colnames(object), sname), drop = FALSE]), identifier = sname, preprocConfig = sconf)
 
+    parentNode(sdata) <- object
 
     childNodes(object)[[sname]] <- .scandal_preprocess(sdata, cell_ids = NULL, forced_genes_set = forced_genes_set, use_housekeeping_filter = use_housekeeping_filter, verbose = verbose)
   }
@@ -43,10 +43,15 @@ scandal_preprocess <- function(object, preproc_config_list, forced_genes_set = N
 }
 
 #' @export
-preprocess <- function(x, preproc_config, sample_id = "", cell_ids = NULL, forced_genes_set = NULL, use_housekeeping_filter = FALSE, verbose = FALSE) {
+preprocess <- function(x, complexity_cutoff, housekeeping_cutoff, expression_cutoff, log_base, scaling_factor,
+                       sample_id = "", cell_ids = NULL, forced_genes_set = NULL, use_housekeeping_filter = FALSE, verbose = FALSE) {
 
   stopifnot(!is_valid_assay(x),
-            !is_config_object(preproc_config),
+            (is.vecrot(complexity_cutoff) & is.numeric(complexity_cutoff)),
+            is.numeric(housekeeping_cutoff),
+            is.numeric(expression_cutoff),
+            is.numeric(log_base),
+            is.numeric(scaling_factor),
             (is.null(forced_genes_set) | is.vector(forced_genes_set)),
             (is.null(cell_ids) | is.vector(cell_ids)),
             is.logical(use_housekeeping_filter),
@@ -61,7 +66,7 @@ preprocess <- function(x, preproc_config, sample_id = "", cell_ids = NULL, force
     message("Detecting high quality cells...")
 
   if (is.null(cell_ids)) {
-    x <- x[, filter_low_quality_cells(x, complexity_cutoff = complexityCutoff(preproc_config), verbose = verbose)]
+    x <- x[, filter_low_quality_cells(x, complexity_cutoff = complexity_cutoff, verbose = verbose)]
 
     if (isFALSE(use_housekeeping_filter)) {
       if (isTRUE(verbose))
@@ -71,7 +76,7 @@ preprocess <- function(x, preproc_config, sample_id = "", cell_ids = NULL, force
       if (isTRUE(verbose))
         message("Detecting low quality cells based on mean expression of housekeeping genes...")
 
-      x <- x[, filter_low_housekeeping_cells(x, housekeeping_cutoff = housekeepingCutoff(preproc_config), verbose = verbose)]
+      x <- x[, filter_low_housekeeping_cells(x, housekeeping_cutoff = housekeeping_cutoff, verbose = verbose)]
     }
   } else {
 
@@ -87,12 +92,12 @@ preprocess <- function(x, preproc_config, sample_id = "", cell_ids = NULL, force
   if (isTRUE(verbose))
     message("Detecting highly expressed genes...")
 
-  x <- x[filter_lowly_expressed_genes(x, expression_cutoff = expressionCutoff(preproc_config), forced_genes_set = forced_genes_set, verbose = verbose), ]
+  x <- x[filter_lowly_expressed_genes(x, expression_cutoff = expression_cutoff, forced_genes_set = forced_genes_set, verbose = verbose), ]
 
   if (isTRUE(verbose))
-    message(paste0("Log transforming TPM matrix, (base - ", logBase(preproc_config), ", scaling factor - ", scalingFactor(preproc_config), ")"))
+    message(paste0("Log transforming TPM matrix, (base - ", log_base, ", scaling factor - ", scaling_factor, ")"))
 
-  x <- log_transform(x, log_base = logBase(preproc_config), scaling_factor = scalingFactor(preproc_config), verbose = verbose)
+  x <- log_transform(x, log_base = log_base, scaling_factor = scaling_factor, verbose = verbose)
 
   if (isTRUE(verbose))
     message("Centering matrix...")
@@ -250,7 +255,10 @@ center_matrix <- function(x, by = "row", method = "mean", verbose = FALSE) {
 
   stopifnot(!is_valid_assay(x), by %in% c("row", "col"), method %in% c("mean", "median"))
 
-  x <- x - compute_central_tendency(x, by = by, method = method, log_transform_res = FALSE, genes_subset = FALSE, verbose = verbose)
+  if (by == "row")
+    x <- t(t(x) - compute_central_tendency(x, by = "row", method = method, log_transform_res = FALSE, genes_subset = NULL, verbose = verbose))
+  else
+    x <- x - compute_central_tendency(x, by = by, method = method, log_transform_res = FALSE, genes_subset = NULL, verbose = verbose)
 
   return (x)
 }
@@ -261,8 +269,17 @@ subset_cells <- function(cell_names, sample_name) cell_names[which(.cell2tumor(c
 
 .scandal_preprocess <- function(object, cell_ids = NULL, forced_genes_set = NULL, use_housekeeping_filter = FALSE, verbose = FALSE) {
 
+  # Extract the preprocessing configuration object
+  preproc_config <- preprocConfig(object)
+
   # Call the matrix preprocessing function
-  x <- preprocess(assay(object), preproc_config = preprocConfig(object), forced_genes_set = forced_genes_set, use_housekeeping_filter = use_housekeeping_filter)
+  x <- preprocess(assay(object),
+                  complexity_cutoff = complexityCutoff(preproc_config),
+                  housekeeping_cutoff = housekeepingCutoff(preproc_config),
+                  expression_cutoff = expressionCutoff(preproc_config),
+                  log_base = logBase(preproc_config),
+                  scaling_factor = scalingFactor(preproc_config),
+                  forced_genes_set = forced_genes_set, use_housekeeping_filter = use_housekeeping_filter)
 
   # subset the object according to the result of the preprocessing function, basically dropping the low quality cells and lowly expressed genes
   object <- object[rownames(x), colnames(x)]

@@ -28,4 +28,5 @@ Imports:
     reshape2,
     patchwork,
     Rtsne,
-    umap
+    umap,
+    methods
