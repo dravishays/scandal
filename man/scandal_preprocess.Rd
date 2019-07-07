@@ -2,21 +2,36 @@
 % Please edit documentation in R/preprocess.R
 \name{scandal_preprocess}
 \alias{scandal_preprocess}
-\title{}
+\title{Scandal object preprocessing}
 \usage{
 scandal_preprocess(object, preproc_config_list, forced_genes_set = NULL,
   use_housekeeping_filter = FALSE, verbose = FALSE)
 }
 \arguments{
-\item{use_housekeeping_filter}{}
+\item{object}{a ScandalDataSet object.}
+
+\item{preproc_config_list}{a named list of containing a \linkS4class{PreprocConfig}
+object for each sample. The names should represent the sample name.}
+
+\item{forced_genes_set}{a vector of genes that should be included in the final
+processed object even if their expression is low with the exception of forced
+genes with absolute count equals to zero which will be filtered out. Default is NULL.}
+
+\item{use_housekeeping_filter}{should cells with low expression of housekeeping genes
+should be filtered out. Default is FALSE.}
 }
 \value{
-
+A processed ScandalDataSet object ready for analysis.
 }
 \description{
-
+Performs preprocessing of ScandalDataSet objects including breaking
+up the dataset into sample-specific objects, filtering out low quality cells and
+lowly expressed genes, log transforming and centering.
 }
 \details{
+
+}
+\examples{
 
 }
 \author{

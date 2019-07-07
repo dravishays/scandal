@@ -5,11 +5,11 @@
 \title{}
 \usage{
 ScandalDataSet(..., childNodes = S4Vectors::SimpleList(),
-  parentNode = NULL, identifier = exp_id(),
-  preprocConfig = DefaultPreprocConfig())
+  parentNode = NULL, preprocConfig = DefaultPreprocConfig(),
+  nodeID = NODE_ID(), projectID = PROJ_ID())
 }
 \arguments{
-\item{preprocConfig}{}
+\item{projectID}{}
 }
 \value{
 A ScandalDataSet object is returned from the constructor

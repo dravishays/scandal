@@ -23,10 +23,10 @@ setGeneric("parentNode", function(object, ...) standardGeneric("parentNode"))
 setGeneric("parentNode<-", function(object, ..., value) standardGeneric("parentNode<-"))
 
 #' @export
-setGeneric("identifier", function(object, ...) standardGeneric("identifier"))
+setGeneric("nodeID", function(object, ...) standardGeneric("nodeID"))
 
-##' @export
-#setGeneric("identifier<-", function(object, ..., value) standardGeneric("identifier<-"))
+#' @export
+setGeneric("projectID", function(object, ...) standardGeneric("projectID"))
 
 #' @export
 setGeneric("sampleNames", function(object, ..., return_sorted = FALSE) standardGeneric("sampleNames"))

@@ -1,17 +1,79 @@
 
 #'
-#' @title
+#' @title Load dataset from file
 #'
-#' @description
+#' @description Loads a dataset
 #'
-#' @param object
-#' @param preproc_config_list
-#' @param forced_genes_set
-#' @param use_housekeeping_filter
+#' @param filename the name of a tab-delimited file containing the dataset
+#' @param drop_cols number of columns that should be dropped from the dataset,
+#' i.e. if drop_cols == 3 then columns 1:3 will be dropped. Default is 1
+#' @param rownames_col the column that contains the rownames, i.e. gene symbols
+#' or identifiers. Default is 1
+#' @param excluded_samples a vector containing the names of the samples that
+#' should be excluded from the returned dataset. Defaults to NULL
 #'
 #' @details
 #'
 #' @return
+#'
+#' @author Avishay Spitzer
+#'
+#' @export
+load_dataset <- function(filename, drop_cols = 1, rownames_col = 1, excluded_samples = NULL, verbose = FALSE) {
+
+  stopifnot(is.character(filename), base::file.exists(filename))
+  stopifnot(is.integer(drop_cols), is.integer(rownames_col), drop_cols > 0, rownames_col > 0)
+  stopifnot(is.null(excluded_samples) | (is.vector(excluded_samples) & is.character(excluded_samples)))
+
+  if (isTRUE(verbose))
+    message("Loading dataset from ", filename)
+
+  dataset <- utils::read.delim(filename, header = TRUE, sep = '\t', stringsAsFactors = FALSE)
+
+  #tpm_data[, rownames_col][c(11570, 11573)] <- c("MARCH1", "MARCH2")
+  rownames(tpm_data) <- dataset[, rownames_col]
+
+  dataset <- dataset[, -seq_len(drop_cols)]
+
+  colnames(dataset) <- base::gsub("\\.", "-", colnames(dataset))
+
+  if (isTRUE(verbose))
+    message("Loaded dataset with ", nrow(dataset), " rows and ", ncol(dataset), " columns")
+
+  if (!is.null(excluded_samples)) {
+
+    dataset <- dataset[, !(.cell2tumor(colnames(dataset)) %in% excluded_samples)]
+
+    if (isTRUE(verbose))
+      message("Excluding ", length(excluded_samples), " samples from dataset which now contains ", nrow(dataset), " rows and ", ncol(dataset), " columns")
+  }
+
+  dataset <- methods::as(dataset, "Matrix")
+
+  return (dataset)
+}
+
+#'
+#' @title Scandal object preprocessing
+#'
+#' @description Performs preprocessing of ScandalDataSet objects including breaking
+#' up the dataset into sample-specific objects, filtering out low quality cells and
+#' lowly expressed genes, log transforming and centering.
+#'
+#' @param object a ScandalDataSet object.
+#' @param preproc_config_list a named list of containing a \linkS4class{PreprocConfig}
+#' object for each sample. The names should represent the sample name.
+#' @param forced_genes_set a vector of genes that should be included in the final
+#' processed object even if their expression is low with the exception of forced
+#' genes with absolute count equals to zero which will be filtered out. Default is NULL.
+#' @param use_housekeeping_filter should cells with low expression of housekeeping genes
+#' should be filtered out. Default is FALSE.
+#'
+#' @details
+#'
+#' @return A processed ScandalDataSet object ready for analysis.
+#'
+#' @examples
 #'
 #' @author Avishay Spitzer
 #'
@@ -27,11 +89,11 @@ scandal_preprocess <- function(object, preproc_config_list, forced_genes_set = N
             base::setequal(sampleNames(object), names(preproc_config_list)),
             base::all(base::lapply(preproc_config_list, function(x) is_config_object(x)) == TRUE))
 
+  project_id <- projectID(object)
+
   for(sname in sampleNames(object)) {
     sconf <- preproc_config_list[[sname]]
-    sdata <- ScandalDataSet(assays = list(tpm = tpm(object)[, .subset_cells(colnames(object), sname), drop = FALSE]), identifier = sname, preprocConfig = sconf)
-
-    parentNode(sdata) <- object
+    sdata <- ScandalDataSet(assays = list(tpm = tpm(object)[, .subset_cells(colnames(object), sname), drop = FALSE]), parentNode = object, preprocConfig = sconf, nodeID = sname, projectID = project_id)
 
     childNodes(object)[[sname]] <- .scandal_preprocess(sdata, cell_ids = NULL, forced_genes_set = forced_genes_set, use_housekeeping_filter = use_housekeeping_filter, verbose = verbose)
   }
@@ -41,6 +103,29 @@ scandal_preprocess <- function(object, preproc_config_list, forced_genes_set = N
   return (object)
 }
 
+#'
+#' @title
+#'
+#' @description
+#'
+#' @param x
+#' @param complexity_cutoff
+#' @param housekeeping_cutoff
+#' @param expression_cutoff
+#' @param log_base
+#' @param scaling_factor
+#' @param forced_genes_set
+#' @param sample_id
+#' @param cell_ids
+#' @param forced_genes_set
+#' @param use_housekeeping_filter
+#'
+#' @details
+#'
+#' @return
+#'
+#' @author Avishay Spitzer
+#'
 #' @export
 preprocess <- function(x, complexity_cutoff, housekeeping_cutoff, expression_cutoff, log_base, scaling_factor,
                        sample_id = "", cell_ids = NULL, forced_genes_set = NULL, use_housekeeping_filter = FALSE, verbose = FALSE) {
@@ -54,8 +139,6 @@ preprocess <- function(x, complexity_cutoff, housekeeping_cutoff, expression_cut
             (is.null(forced_genes_set) | is.vector(forced_genes_set)),
             (is.null(cell_ids) | is.vector(cell_ids)),
             is.logical(use_housekeeping_filter))
-
-  x <- as.matrix(x)
 
   if (isTRUE(verbose))
     message("Preprocessing sample ", sample_id, "...")
@@ -112,31 +195,77 @@ preprocess <- function(x, complexity_cutoff, housekeeping_cutoff, expression_cut
   if (isTRUE(verbose))
     message("Preprocessing done!")
 
-  x <- as(x, "Matrix")
+  return (x)
+}
+
+#'
+#' @title Log-transforms a numeric object
+#'
+#' @description Performs log transformation on a numeric object. The data can be
+#' scaled first if requested by dividing X by the provided scaling factor.
+#'
+#' @param x a numeric object (i.e. vector or matrix)
+#' @param log_base a positive number representing the base with respect to which
+#' the logarithm will be computed. Default is 2
+#' @param scaling_factor a positive number by which the data will be scaled, i.e.
+#' divided prior to log computation. Default is 1, i.e. no scaling
+#' @param pseudo_count a positive number which will be added to the possibly scaled
+#' x prior to log computation to avoid taking the logarithm of zero. Default is 1
+#'
+#' @details
+#'
+#' @return A log-transformed numeric object.
+#'
+#' @author Avishay Spitzer
+#'
+#' @export
+log_transform <- function(x, log_base = 2, scaling_factor = 1, pseudo_count = 1, verbose = FALSE) {
+
+  stopifnot(!is.null(x), is.numeric(x),
+            (is.numeric(log_base) & log_base > 0),
+            (is.numeric(scaling_factor) & scaling_factor > 0),
+            (is.numeric(pseudo_count) & pseudo_count > 0))
+
+  x <- log( (x / scaling_factor) + pseudo_count, base = log_base)
 
   return (x)
 }
 
-#' @export
-log_transform <- function(x, log_base = 2, scaling_factor = 1, pseudo_count = 1, verbose = FALSE) {
-
-  stopifnot(!is.null(x), log_base > 0, scaling_factor > 0, pseudo_count > 0)
-
-  x <- base::log( (x / scaling_factor) + pseudo_count, base = log_base)
-
-  return(x)
-}
-
+#'
+#' @describeIn log_transform Reverses the log transformation, i.e \deqn{(log_base^x * scaling_factor) - pseudo_count}
+#'
 #' @export
 reverse_log_transform <- function(x, log_base = 2, scaling_factor = 1, pseudo_count = 1, verbose = FALSE) {
 
-  stopifnot(!is.null(x), log_base > 0, scaling_factor > 0, pseudo_count > 0)
+  stopifnot(!is.null(x), is.numeric(x),
+            (is.numeric(log_base) & log_base > 0),
+            (is.numeric(scaling_factor) & scaling_factor > 0),
+            (is.numeric(pseudo_count) & pseudo_count > 0))
 
   x <- (log_base^x * scaling_factor) - pseudo_count
 
-  return(x)
+  return (x)
 }
 
+#'
+#' @title Compute cell complexity
+#'
+#' @description Computes the complexity, i.e. the number of genes with count
+#' greater than zero for each cell (column).
+#'
+#' @param x a numeric matrix or Matrix object
+#' @param return_sorted should the result be returned sorted. Default is FALSE
+#' @param cell_subset a vector of cell IDs for which the complexity should be
+#' calculated. Default is NULL
+#'
+#' @details
+#'
+#' @return A named vector of complexity per cell ID.
+#'
+#' @examples
+#'
+#' @author Avishay Spitzer
+#'
 #' @export
 compute_complexity <- function(x, return_sorted = FALSE, cell_subset = NULL, verbose = FALSE) {
 
@@ -151,38 +280,62 @@ compute_complexity <- function(x, return_sorted = FALSE, cell_subset = NULL, ver
     c <- base::sort(c)
   }
 
-  return(c)
+  return (c)
 }
 
+#'
+#' @title Centers a matrix
+#'
+#' @description Centers the mean/median of each row/column of the given matrix
+#' around zero.
+#'
+#' @param x a numeric matrix or Matrix object
+#' @param by either "row" or "col". Default is "row"
+#' @param method either "mean" or "median". Default is "mean"
+#'
+#' @details
+#'
+#' @return A matrix with either mean or median of row/column centered around zero.
+#'
+#' @examples
+#' # Center the mean of each row around zero
+#' m <- matrix(runif(25, 0, 100), nrow = 5, ncol = 5) # Generate a 5x5 numeric matrix
+#' m <- center_matrix(m, by = "row", method = "mean") # Center
+#' all(rowMeans(m) == 0) # TRUE
+#' all(colMeans(m) == 0) # FALSE
+#'
+#' # Center the median of each column around zero
+#' m <- matrix(runif(25, 0, 100), nrow = 5, ncol = 5) # Generate a 5x5 numeric matrix
+#' m <- center_matrix(m, by = "col", method = "median") # Center
+#' all(rowMedians(m) == 0) # FALSE
+#' all(colMedians(m) == 0) # TRUE
+#'
+#' @author Avishay Spitzer
+#'
 #' @export
-compute_central_tendency <- function(x, by = "row", method = "mean", log_transform_res = FALSE, genes_subset = NULL, verbose = FALSE) {
+center_matrix <- function(x, by = "row", method = "mean", verbose = FALSE) {
 
-  stopifnot(is_valid_assay(x), by %in% c("row", "col"), is.logical(log_transform_res), (is.null(genes_subset) | is.vector(genes_subset)))
+  stopifnot(is_valid_assay(x), by %in% c("row", "col"), method %in% c("mean", "median"))
 
-  if (!is.null(genes_subset))
-    x <- x[rownames(x) %in% genes_subset, ]
+  center <- .compute(x, by = by, method = method, log_transform_res = FALSE, genes_subset = NULL, verbose = verbose)
 
-  func <- base::match.fun(method)
+  by <- ifelse(by == "row", 1, 2)
 
-  x <- base::apply(x, ifelse(by == "row", 1, 2), func)
-
-  if (isTRUE(log_transform_res))
-    x <- base::log2(x + 1)
+  x <- base::sweep(x, by, center, check.margin = FALSE)
 
   return (x)
 }
 
-#' @export
 filter_low_quality_cells <- function(x, complexity_cutoff, verbose = FALSE) {
 
-  stopifnot(is_valid_assay(x), is.numeric(complexity_cutoff), complexity_cutoff > 0)
+  stopifnot(is_valid_assay(x), is.numeric(complexity_cutoff), length(complexity_cutoff) == 2, complexity_cutoff[1] >= 0, complexity_cutoff[2] > complexity_cutoff[1])
 
   d <- compute_complexity(x, return_sorted = FALSE, cell_subset = NULL, verbose = verbose)
 
   passQC <- d[(d >= complexity_cutoff[1]) & (d <= complexity_cutoff[2]), drop = FALSE]
 
   if (isTRUE(verbose))
-    message(sprintf("%d cells pre-QC, cell cutoff - lower bound %d [cells], upper bound %d [cells], %d cells passed QC, %2.0f%% of cells dropped",
+    message(sprintf("%d cells pre-QC, cell cutoff - lower bound %d [genes], upper bound %d [genes], %d cells passed QC, %2.0f%% of cells dropped",
                     length(d),
                     complexity_cutoff[1],
                     complexity_cutoff[2],
@@ -192,12 +345,11 @@ filter_low_quality_cells <- function(x, complexity_cutoff, verbose = FALSE) {
   return (names(passQC))
 }
 
-#' @export
 filter_low_housekeeping_cells <- function(x, housekeeping_cutoff, verbose = FALSE) {
 
   stopifnot(is_valid_assay(x), is.numeric(housekeeping_cutoff), housekeeping_cutoff > 0)
 
-  hk_mean_exp <- compute_central_tendency(x, by = "col", method = "mean", log_transform_res = TRUE, genes_subset = HOUSEKEEPING_GENES_LIST, verbose = verbose)
+  hk_mean_exp <- .compute(x, by = "col", method = "mean", log_transform_res = TRUE, genes_subset = HOUSEKEEPING_GENES_LIST, verbose = verbose)
 
   passQC <- hk_mean_exp[hk_mean_exp >= housekeeping_cutoff]
 
@@ -211,12 +363,11 @@ filter_low_housekeeping_cells <- function(x, housekeeping_cutoff, verbose = FALS
   return (names(passQC))
 }
 
-#' @export
 filter_lowly_expressed_genes <- function(x, expression_cutoff, forced_genes_set = NULL, verbose = FALSE) {
 
   stopifnot(is_valid_assay(x), is.numeric(expression_cutoff), expression_cutoff > 0, (is.null(forced_genes_set) | is.vector(forced_genes_set)))
 
-  gene_counts <- compute_central_tendency(x, by = "row", method = "mean", log_transform_res = TRUE, genes_subset = forced_genes_set, verbose = verbose)
+  gene_counts <- .compute(x, by = "row", method = "mean", log_transform_res = TRUE, genes_subset = NULL, verbose = verbose)
 
   passQC <- gene_counts[gene_counts >= expression_cutoff]
 
@@ -237,65 +388,103 @@ filter_lowly_expressed_genes <- function(x, expression_cutoff, forced_genes_set 
   return (unique(c(names(passQC), names(passQC_forced_genes))))
 }
 
-#'
-#' @title Centers a matrix
-#'
-#' @description Centers each row or column of the given matrix around the mean or median
-#'
-#' @param x a numeric matrix
-#' @param by
-#' @param method the
-#'
-#' @details
-#'
-#' @return
-#'
-#' @author Avishay Spitzer
-#'
 #' @export
-center_matrix <- function(x, by = "row", method = "mean", verbose = FALSE) {
+scandal_plot_qc_metrics <- function(object, preproc_config_list, show_plot = TRUE, save_to_file = TRUE) {
 
-  stopifnot(is_valid_assay(x), by %in% c("row", "col"), method %in% c("mean", "median"))
+  stopifnot(!is_scandal_object(object), is.logical(show_plot), is.logical(save_to_file))
 
-  x <- t(t(x) - compute_central_tendency(x, by = by, method = method, log_transform_res = FALSE, genes_subset = NULL, verbose = verbose))
+  stopifnot(!is.null(preproc_config_list),
+            is.list(preproc_config_list),
+            base::setequal(sampleNames(object), names(preproc_config_list)),
+            base::all(base::lapply(preproc_config_list, function(x) is_config_object(x)) == TRUE))
 
-  return (x)
-}
+  project_id <- projectID(object)
 
-#' @export
-load_tpm_data <- function(filename, drop_cols = 2, rownames_col = 1, excluded_samples = NULL, verbose = FALSE) {
+  for(sname in sampleNames(object)) {
+    sconf <- preproc_config_list[[sname]]
+    sdata <- ScandalDataSet(assays = list(tpm = tpm(object)[, .subset_cells(colnames(object), sname), drop = FALSE]), parentNode = object, preprocConfig = sconf, nodeID = sname, projectID = project_id)
 
-  stopifnot(is.character(filename), base::file.exists(filename))
-  stopifnot(is.integer(drop_cols), is.integer(rownames_col), drop_cols > 0, rownames_col > 0)
-  stopifnot(is.null(excluded_samples) | (is.vector(excluded_samples) & is.character(excluded_samples)))
+    plot_cell_complexity_distribution(sdata, show_plot = show_plot, save_to_file = save_to_file)
 
-  if (isTRUE(verbose))
-    message("Loading TPM data from ", filename)
+    plot_mean_housekeeping_expression(sdata, show_plot = show_plot, save_to_file = save_to_file)
 
-  tpm_data <- utils::read.delim(filename, header = TRUE, sep = '\t', stringsAsFactors = FALSE)
-
-  #tpm_data[, rownames_col][c(11570, 11573)] <- c("MARCH1", "MARCH2")
-  rownames(tpm_data) <- tpm_data[, rownames_col]
-
-  tpm_data <- tpm_data[, -seq_len(drop_cols)]
-
-  colnames(tpm_data) <- base::gsub("\\.", "-", colnames(tpm_data))
-
-  if (isTRUE(verbose))
-    message("Loaded dataset with ", nrow(tpm_data), " rows and ", ncol(tpm_data), " columns")
-
-  if (!is.null(excluded_samples)) {
-
-    tpm_data <- tpm_data[, !(.cell2tumor(colnames(tpm_data)) %in% excluded_samples)]
-
-    if (isTRUE(verbose))
-      message("Excluding ", length(excluded_samples), " samples from dataset which now contains ", nrow(tpm_data), " rows and ", ncol(tpm_data), " columns")
+    plot_mean_expression_frequency(sdata, show_plot = show_plot, save_to_file = save_to_file)
   }
-
-  tpm_data <- methods::as(tpm_data, "Matrix")
-
-  return (tpm_data)
 }
+
+#' @export
+plot_cell_complexity_distribution <- function(object, show_plot = TRUE, save_to_file = TRUE) {
+
+  stopifnot(!is_scandal_object(object), is.logical(show_plot), is.logical(save_to_file))
+
+  preproc_config <- preprocConfig(object)
+
+  complexity_cutoff <- complexityCutoff(preproc_config)
+
+  complexity <- compute_complexity(assay(object))
+
+  p <- generate_scatter_plot(y_data = complexity, title = paste0(nodeID(object), " - Cell complexity distribution"), xlab = "Cells", ylab = "Complexity", plot_ordered = TRUE)
+
+  p <- p +
+    ggplot2::geom_hline(yintercept = complexity_cutoff[1], linetype = "dashed", color = "red") +
+    ggplot2::geom_hline(yintercept = complexity_cutoff[2], linetype = "dashed", color = "red")
+
+  scandal_plot(p, show_plot = show_plot, project_dir = projectID(object), save_to_file = save_to_file, filename = paste0(nodeID(object), "_complexity.png"), dirname = "QC")
+}
+
+#' @export
+plot_mean_housekeeping_expression <- function(object, show_plot = TRUE, save_to_file = TRUE) {
+
+  stopifnot(!is_scandal_object(object), is.logical(show_plot), is.logical(save_to_file))
+
+  preproc_config <- preprocConfig(object)
+
+  housekeeping_cutoff <- housekeepingCutoff(preproc_config)
+
+  hk_mean_exp <- .compute(assay(object), by = "col", method = "mean", log_transform_res = TRUE, genes_subset = HOUSEKEEPING_GENES_LIST)
+
+  p <- generate_scatter_plot(y_data = hk_mean_exp, title = paste0(nodeID(object), " - Mean expression of housekeeping genes distribution"), xlab = "Cells", ylab = "Mean expression [log2]", plot_ordered = TRUE)
+
+  p <- p + ggplot2::geom_hline(yintercept = housekeeping_cutoff, linetype = "dashed", color = "red")
+
+  scandal_plot(p, show_plot = show_plot, save_to_file = save_to_file, project_dir = projectID(object), filename = paste0(nodeID(object), "_mean_hk_expression.png"), dirname = "QC")
+}
+
+#' @export
+plot_mean_expression_frequency <- function(object, show_plot = TRUE, save_to_file = TRUE) {
+
+  stopifnot(!is_scandal_object(object), is.logical(show_plot), is.logical(save_to_file))
+
+  preproc_config <- preprocConfig(object)
+
+  expression_cutoff <- expressionCutoff(preproc_config)
+
+  gene_exp <- .compute(assay(object), by = "row", method = "mean", log_transform_res = TRUE)
+
+  p <- generate_histogram_plot(data = gene_exp, title = paste0(nodeID(object), " - Mean gene expression frequency"), xlab = "Mean expression [log2]", ylab = "Frequency")
+
+  p <- p + ggplot2::geom_vline(xintercept = expression_cutoff, linetype = "dashed", color = "red")
+
+  scandal_plot(p, show_plot = show_plot, save_to_file = save_to_file, project_dir = projectID(object), filename = paste0(nodeID(object), "_mean_gene_expression.png"), dirname = "QC")
+}
+
+# #' @export
+# plot_mean_complexity <- function(object, show_plot = TRUE, save_to_file = TRUE) {
+#
+#   stopifnot(!is_scandal_object(object), is.logical(show_plot), is.logical(save_to_file))
+#
+#   plot_mean_complexity(esce, save_to_file = TRUE, filename = "complexity_per_tumor_pre_qc.png", title = "Complexity per tumor (pre QC)")
+#
+#   complexity_pre  <- compute_complexity(unprocessedData(object))
+#   complexity_post <- compute_complexity(assay(object))
+#
+#   p1 <- generate_whiskers_plot(data = complexity_pre, title = title, labels = colData(esce)$Tumor, xlab = "Tumor")
+#   p2 <- generate_whiskers_plot(data = complexity_post, title = title, labels = colData(esce)$Tumor, xlab = "Tumor")
+#
+#   plot(p, show_plot = show_plot, save_to_file = save_to_file,
+#        filename = ifelse(is.null(filename), paste0(identifier(esce), "_complexity_per_tumor_whiskers.png"), filename),
+#        dirname = ifelse(is.null(dirname), "QC", dirname))
+# }
 
 .subset_cells <- function(cell_names, sample_name) cell_names[which(.cell2tumor(cell_names) %in% sample_name)]
 
@@ -306,17 +495,24 @@ load_tpm_data <- function(filename, drop_cols = 2, rownames_col = 1, excluded_sa
   # Extract the preprocessing configuration object
   preproc_config <- preprocConfig(object)
 
+  # Coerce to base R matrix
+  x <- as.matrix(assay(object))
+
   # Call the matrix preprocessing function
-  x <- preprocess(assay(object),
+  x <- preprocess(x,
                   complexity_cutoff = complexityCutoff(preproc_config),
                   housekeeping_cutoff = housekeepingCutoff(preproc_config),
                   expression_cutoff = expressionCutoff(preproc_config),
                   log_base = logBase(preproc_config),
                   scaling_factor = scalingFactor(preproc_config),
-                  forced_genes_set = forced_genes_set, use_housekeeping_filter = use_housekeeping_filter)
+                  sample_id = nodeID(object), cell_ids = cell_ids,
+                  forced_genes_set = forced_genes_set, use_housekeeping_filter = use_housekeeping_filter, verbose = verbose)
 
   # subset the object according to the result of the preprocessing function, basically dropping the low quality cells and lowly expressed genes
   object <- object[rownames(x), colnames(x)]
+
+  # Coerce to Matrix object to benefit from sparse representation
+  x <- as(x, "Matrix")
 
   # Add the new log TPM assay to the object
   logtpm(object) <- x
@@ -329,9 +525,26 @@ load_tpm_data <- function(filename, drop_cols = 2, rownames_col = 1, excluded_sa
 
 .aggregate_cell_ids <- function(object) {
 
-  cell_ids <- c()
-  for (c in childNodes(object))
-    cell_ids <- c(cell_ids, colnames(c))
+  cell_ids <- lapply(childNodes(object), function(x) colnames(x))
+  cell_ids <- base::unname(base::unlist(cell_ids))
 
   return (cell_ids)
+}
+
+# Internal function that can run different computations given a method on either rows or columns with the posibility to subset them
+.compute <- function(x, by = "row", method = "mean", log_transform_res = FALSE, genes_subset = NULL, verbose = FALSE) {
+
+  stopifnot(is_valid_assay(x), by %in% c("row", "col"), is.logical(log_transform_res), (is.null(genes_subset) | is.vector(genes_subset)))
+
+  if (!is.null(genes_subset))
+    x <- x[rownames(x) %in% genes_subset, ]
+
+  func <- base::match.fun(method)
+
+  x <- base::apply(x, ifelse(by == "row", 1, 2), func)
+
+  if (isTRUE(log_transform_res))
+    x <- base::log2(x + 1)
+
+  return (x)
 }

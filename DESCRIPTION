@@ -29,9 +29,13 @@ Depends:
     patchwork,
     Rtsne,
     umap,
-    methods
+    methods,
+    RColorBrewer,
+    grDevices
 RoxygenNote: 6.1.1
 Collate: 
     'AllGenerics.R'
     'AllClasses.R'
+    'gene_sets.R'
+    'plotting.R'
     'preprocess.R'

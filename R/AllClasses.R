@@ -8,16 +8,20 @@ NULL
 ###
 
 setClassUnion("ScandalDataSetOrNULL", c("NULL"))
-
-#' @importClassesFrom Matrix Matrix
 setClassUnion("MatrixOrNULL", c("Matrix", "matrix", "NULL"))
-#setClassUnion("MatrixOrNULL", c("matrix", "NULL"))
 
 #'
+#' @title ScandalDataSet class
 #' @description An S4 class for storing single-cell seqeuncing data, analysis
 #'
 #' @slot childNodes
 #' @slot parentNode
+#' @slot unprocessedData
+#' @slot preprocConfig
+#' @slot nodeID
+#' @slot projectID
+#'
+#' @method
 #'
 #' @author Avishay Spitzer
 #'
@@ -26,7 +30,10 @@ setClassUnion("MatrixOrNULL", c("Matrix", "matrix", "NULL"))
 setClass("ScandalDataSet",
          slots = c(childNodes = "SimpleList",
                    parentNode = "ScandalDataSetOrNULL",
-                   unprocessedData = "MatrixOrNULL"),
+                   unprocessedData = "MatrixOrNULL",
+                   preprocConfig = "PreprocConfig",
+                   nodeID = "character",
+                   projectID = "character"),
          contains = "SingleCellExperiment"
 )
 
@@ -44,8 +51,9 @@ setIs("ScandalDataSet", "ScandalDataSetOrNULL")
 #' @param ...
 #' @param childNodes
 #' @param parentNode
-#' @param identifier
 #' @param preprocConfig
+#' @param nodeID
+#' @param projectID
 #'
 #' @details
 #'
@@ -54,27 +62,30 @@ setIs("ScandalDataSet", "ScandalDataSetOrNULL")
 #' @author Avishay Spitzer
 #'
 #' @export
-ScandalDataSet <- function(..., childNodes = S4Vectors::SimpleList(), parentNode = NULL, identifier = exp_id(), preprocConfig = DefaultPreprocConfig()) {
+ScandalDataSet <- function(..., childNodes = S4Vectors::SimpleList(), parentNode = NULL, preprocConfig = DefaultPreprocConfig(), nodeID = NODE_ID(), projectID = PROJ_ID()) {
+
   sce <- SingleCellExperiment::SingleCellExperiment(...)
+
   if(!is(sce, "SingleCellExperiment")) {
     sce <- as(sce, "SingleCellExperiment")
   }
 
-  object <- new("ScandalDataSet", sce)
-  object@childNodes <- childNodes
-  object@parentNode <- parentNode
+  if (is.null(parentNode))
+    unprocessedData <- assay(sce)
+  else
+    unprocessedData <- NULL
+
+  object <- new("ScandalDataSet", sce,
+                childNodes = childNodes,
+                parentNode = parentNode,
+                unprocessedData = unprocessedData,
+                preprocConfig = preprocConfig,
+                nodeID = nodeID,
+                projectID = projectID)
 
   int_colData(object)$Scandal <- S4Vectors::DataFrame(row.names = colnames(object))
   int_elementMetadata(object)$Scandal <- S4Vectors::DataFrame(row.names = rownames(object))
   int_metadata(object)$Scandal <- list()
-
-  int_metadata(object)$Scandal[["identifier"]] <- identifier
-  int_metadata(object)$Scandal[["preprocConfig"]] <- preprocConfig
-
-  if (is.null(object@parentNode))
-    object@unprocessedData <- assay(sce)
-  else
-    object@unprocessedData <- NULL
 
   return (object)
 }
@@ -85,30 +96,10 @@ ScandalDataSet <- function(..., childNodes = S4Vectors::SimpleList(), parentNode
 
 setValidity("ScandalDataSet", function(object) {
 
-  # if (is.null(int_colData(object)$Scandal))
-  #   return (sprintf("int_colData$Scandal cannot be set to NULL"))
-  # if (!is(int_colData(object)$Scandal, "DataFrame"))
-  #   return (sprintf("int_colData$Scandal must be a DataFrame object and not ", class(int_colData$Scandal)))
-  #
-  # if (is.null(int_elementMetadata(object)$Scandal))
-  #   return (sprintf("int_elementMetadata$Scandal cannot be set to NULL"))
-  # if (!is(int_elementMetadata(object)$Scandal, "DataFrame"))
-  #   return (sprintf("int_elementMetadata$Scandal must be a DataFrame object and not ", class(int_elementMetadata$Scandal)))
-  #
-  # if (is.null(int_metadata(object)$Scandal))
-  #   return (sprintf("int_metadata$Scandal cannot be set to NULL"))
-  # if (!is(int_metadata(object)$Scandal, "list"))
-  #   return (sprintf("int_metadata$Scandal must be a list object and not ", class(int_metadata$Scandal)))
-  #
-  # for(c in object@childNodes)
-  #   if (!is(c, "ScandalDataSet"))
-  #     return (sprintf("Every child node must be a ScandalDataSet object and not ", class(c)))
-  #
-  # if (!is.character(identifier(object)))
-  #   return (sprintf("A ScandalDataSet object must have a character identifier"))
-  #
-  # if (!is(preprocConfig(object), "PreprocConfig"))
-  #   return (sprintf("A ScandalDataSet object must have a preprocessing configuration object of class PreprocConfig and not ", class(preprocConfig(object))))
+  is_child_sds <- sapply(childNodes(object), function(c) is(c, "ScandalDataSet"))
+
+  if (!(base::all(is_child_sds) == TRUE))
+    return (sprintf("Every child node must be a ScandalDataSet object"))
 
   return (TRUE)
 })
@@ -153,14 +144,14 @@ setReplaceMethod("parentNode", "ScandalDataSet", function(object, value) {
 })
 
 #' @export
-setMethod("identifier", "ScandalDataSet", function(object) {
-  return(int_metadata(object)$Scandal[["identifier"]])
+setMethod("nodeID", "ScandalDataSet", function(object) {
+  return(object@nodeID)
 })
 
-#setReplaceMethod("identifier", "ExtendedSingleCellExperiment", function(x, value) {
-#  x@identifier <- value
-#  return(x)
-#})
+#' @export
+setMethod("projectID", "ScandalDataSet", function(object) {
+  return(object@projectID)
+})
 
 #' @export
 setMethod("sampleNames", "ScandalDataSet", function(object) {
@@ -174,12 +165,15 @@ setMethod("unprocessedData", "ScandalDataSet", function(object) {
   while(!is.null(parentNode(o)))
     o <- parentNode(o)
 
-  return (o@unprocessedData)
+  sname <- base::unique(.cell2tumor(colnames(object)))
+
+  # return only the cells that belong to this specific tumor
+  return (o@unprocessedData[, .subset_cells(colnames(o@unprocessedData), sname), drop = FALSE])
 })
 
 #' @export
 setMethod("preprocConfig", "ScandalDataSet", function(object) {
-  return(int_metadata(object)$Scandal[["preprocConfig"]])
+  return(object@preprocConfig)
 })
 
 ##' @export
@@ -203,8 +197,9 @@ scat <- function(fmt, vals=character(), exdent=2, ...) {
 setMethod("show", "ScandalDataSet", function(object) {
   callNextMethod()
   scat("childNodes(%d): %s\n", names(childNodes(object)))
-  cat("parentNode:", ifelse(is.null(parentNode(object)), "None", identifier(parentNode(object))), "\n")
-  cat("identifier:", identifier(object), "\n")
+  cat("parentNode:", ifelse(is.null(parentNode(object)), "None", nodeID(parentNode(object))), "\n")
+  cat("nodeID:", nodeID(object), "\n")
+  cat("projectID:", projectID(object), "\n")
   cat("unprocessedData:", class(unprocessedData(object)), "with", NROW(unprocessedData(object)), "rows and", NCOL(unprocessedData(object)), "columns\n")
 })
 
@@ -213,7 +208,8 @@ is_scandal_object <- function(object) { return (is.null(object) | !is(object, "S
 is_valid_assay <- function(x) { return (!(is.null(x)) & (is(x, "Matrix") | is.matrix(x))) }
 
 # Generates a random experiment ID by sampling a random integer
-exp_id <- function() { paste0("EXP", base::sample(1:1e9, 1, replace = FALSE)) }
+NODE_ID <- function() { paste0("NODE", base::sample(1:1e9, 1, replace = FALSE)) }
+PROJ_ID <- function() { paste0("PROJ", base::sample(1:1e9, 1, replace = FALSE)) }
 
 ### -------------------------------------------------------------------------
 ### ScandalDataSet objects (end)
