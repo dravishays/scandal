@@ -1,6 +1,234 @@
-#' @include AllGenerics.R
-NULL
 
+#' @title S4 classes definition
+#' @details Includes the generics definition file
+#' @include AllGenerics.R
+NULL # Do not remove me!!!
+
+### =========================================================================
+### PreprocConfig objects (start)
+### -------------------------------------------------------------------------
+###
+
+#'
+#' @title PreprocConfig class
+#'
+#' @description An S4 class for storing preprocessing configuration parameters.
+#'
+#' @slot complexityCutoff A numeric vector of length 2 representing the lower and
+#' upper bounds of complexity (i.e. the number of detected genes per cell)
+#' @slot expressionCutoff A numeric representing the minimal log2 mean expression
+#' per gene below which a gene is considered lowly expressed
+#' @slot housekeepingCutoff A numeric representing the log2 mean expression of
+#' house-keeping genes (i.e. genes that are highly expressed in all cells) per
+#' cell below which a cell is considered low quality
+#' @slot logBase A numeric representing the logarithm base for performing log
+#' transformation on the data
+#' @slot scalingFactor A numeric representing a scaling factor by which to divide
+#' each data point before log transformation
+#'
+#' @section Methods:
+#' \describe{
+#'   \item{\code{complexityCutoff}}{Getter/setter for the complexity cutoff}
+#'   \item{\code{expressionCutoff}}{Getter/setter for the expression cutoff}
+#'   \item{\code{housekeepingCutoff}}{Getter/setter for the housekeeping cutoff}
+#'   \item{\code{logBase}}{Getter/setter for the log base}
+#'   \item{\code{scalingFactor}}{Getter/setter for the scaling factor}
+#' }
+#'
+#' @examples
+#' pc <- PreprocConfig(complexityCutoff = c(0, 10000), expressionCutoff = 5, housekeepingCutoff = 7, logBase = 2, scalingFactor = 10)
+#'
+#' @aliases PreprocConfig
+#'
+#' @author Avishay Spitzer
+#'
+#' @export
+setClass("PreprocConfig",
+         slots = c(complexityCutoff = "vector",
+                   expressionCutoff = "numeric",
+                   housekeepingCutoff = "numeric",
+                   logBase = "numeric",
+                   scalingFactor = "numeric"))
+
+### - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+### Constructors
+###
+
+#'
+#' @describeIn PreprocConfig-class Constructs a new \code{PreprocConfig} object.
+#'
+#' @export
+PreprocConfig <- function(complexityCutoff, expressionCutoff, housekeepingCutoff, logBase, scalingFactor) {
+  cp <- new("PreprocConfig", complexityCutoff = complexityCutoff, expressionCutoff = expressionCutoff, housekeepingCutoff = housekeepingCutoff, logBase = logBase, scalingFactor = scalingFactor)
+
+  return (cp)
+}
+
+#'
+#' @describeIn PreprocConfig-class constructs default preprocessing configuration for data
+#' generated from frozen samples using SmartSeq2 protocol (single-nuclei sequencing).
+#'
+#' @export
+NucseqPreprocConfig <- function() {
+  return (PreprocConfig(complexityCutoff = c(2000, 6000), expressionCutoff = 5, housekeepingCutoff = 7, logBase = 2, scalingFactor = 10))
+}
+
+#'
+#' @describeIn PreprocConfig-class constructs default preprocessing configuration for data
+#' generated from fresh samples using SmartSeq2 protocol.
+#'
+#' @export
+SS2PreprocConfig <- function() {
+  return (PreprocConfig(complexityCutoff = c(3000, 8000), expressionCutoff = 4, housekeepingCutoff = 7, logBase = 2, scalingFactor = 10))
+}
+
+#'
+#' @describeIn PreprocConfig-class constructs default preprocessing configuration
+#' (currently trhe selected default configuration is Nucseq).
+#'
+#' @export
+DefaultPreprocConfig <- function() {
+  return (NucseqPreprocConfig())
+}
+
+### - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+### Validity
+###
+
+setValidity("PreprocConfig", function(object) {
+
+  if (!is.numeric(object@complexityCutoff))
+    return (sprintf("complexity cutoff must be of numeric type"))
+  if (length(object@complexityCutoff) != 2)
+    return (sprintf("complexity cutoff must be a numeric vector of length equals to 2"))
+  if (object@complexityCutoff[1] < 0)
+    return (sprintf("lower bound of complexity cutoff must be greater than or equal to 0"))
+  if (object@complexityCutoff[2] <= object@complexityCutoff[1])
+    return (sprintf("upper bound of complexity cutoff must be greater than lower bound"))
+
+  if (object@expressionCutoff <= 0)
+    return (sprintf("expression cutoff must be greater than or equal to 0"))
+
+  if (object@housekeepingCutoff <= 0)
+    return (sprintf("housekeeping cutoff must be greater than 0"))
+
+  if (object@logBase <= 0)
+    return (sprintf("log base must be greater than 0"))
+
+  if (object@scalingFactor <= 0)
+    return (sprintf("scaling factor must be greater than 0"))
+
+  return(TRUE)
+})
+
+### - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+### Getters and setters.
+###
+
+#'
+#' @rdname PreprocConfig-class
+#'
+#' @export
+setMethod("complexityCutoff", "PreprocConfig", function(x) {
+  return(x@complexityCutoff)
+})
+
+#'
+#' @rdname PreprocConfig-class
+#'
+#' @export
+setReplaceMethod("complexityCutoff", "PreprocConfig", function(x, value) {
+  x@complexityCutoff <- value
+  return(x)
+})
+
+#'
+#' @rdname PreprocConfig-class
+#'
+#' @export
+setMethod("expressionCutoff", "PreprocConfig", function(x) {
+  return(x@expressionCutoff)
+})
+
+#'
+#' @rdname PreprocConfig-class
+#'
+#' @export
+setReplaceMethod("expressionCutoff", "PreprocConfig", function(x, value) {
+  x@expressionCutoff <- value
+  return(x)
+})
+
+#'
+#' @rdname PreprocConfig-class
+#'
+#' @export
+setMethod("housekeepingCutoff", "PreprocConfig", function(x) {
+  return(x@housekeepingCutoff)
+})
+
+#'
+#' @rdname PreprocConfig-class
+#'
+#' @export
+setReplaceMethod("housekeepingCutoff", "PreprocConfig", function(x, value) {
+  x@housekeepingCutoff <- value
+  return(x)
+})
+
+#'
+#' @rdname PreprocConfig-class
+#'
+#' @export
+setMethod("logBase", "PreprocConfig", function(x) {
+  return(x@logBase)
+})
+
+#'
+#' @rdname PreprocConfig-class
+#'
+#' @export
+setReplaceMethod("logBase", "PreprocConfig", function(x, value) {
+  x@logBase <- value
+  return(x)
+})
+
+#'
+#' @rdname PreprocConfig-class
+#'
+#' @export
+setMethod("scalingFactor", "PreprocConfig", function(x) {
+  return(x@scalingFactor)
+})
+
+#'
+#' @rdname PreprocConfig-class
+#'
+#' @export
+setReplaceMethod("scalingFactor", "PreprocConfig", function(x, value) {
+  x@scalingFactor <- value
+  return(x)
+})
+
+### - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+### Display
+###
+
+#' @export
+setMethod("show", "PreprocConfig", function(object) {
+  cat("Complexity cutoff:", complexityCutoff(object), "\n")
+  cat("Expression cutoff:", expressionCutoff(object), "\n")
+  cat("Housekeeping cutoff:", housekeepingCutoff(object), "\n")
+  cat("Scaling factor:", scalingFactor(object), "\n")
+  cat("Log base:", logBase(object), "\n")
+})
+
+is_config_object <- function(object) { return (!is.null(object) & is(object, "PreprocConfig")) }
+
+### -------------------------------------------------------------------------
+### PreprocConfig objects (end)
+### =========================================================================
+###
 
 ### =========================================================================
 ### ScandalDataSet objects (start)
@@ -12,16 +240,42 @@ setClassUnion("MatrixOrNULL", c("Matrix", "matrix", "NULL"))
 
 #'
 #' @title ScandalDataSet class
+#'
 #' @description An S4 class for storing single-cell seqeuncing data, analysis
 #'
-#' @slot childNodes
-#' @slot parentNode
-#' @slot unprocessedData
-#' @slot preprocConfig
-#' @slot nodeID
-#' @slot projectID
+#' @details The S4 class \code{ScandalDataSet}
 #'
-#' @method
+#' @slot childNodes a \code{SimpleList} object containing the child nodes of the
+#' constructed \code{ScandalDataSet} object.
+#' @slot parentNode the parent node of the constructed \code{ScandalDataSet}
+#' object.
+#' @slot unprocessedData a read-only matrix that contains the unprocessed data that
+#' allows re-accessing this data without the need to read it from file. Sparse matrix
+#' representation as well as maintaining a single copy for the entire objects tree
+#' decreases the memory overhead of this approach.
+#' @slot preprocConfig a configuration object of class \code{PreprocConfig}.
+#' @slot nodeID a unique character identifier of the constructed \code{ScandalDataSet}
+#' object that should represent the specific sample.
+#' @slot projectID a character identifier common to all the nodes in the constructed
+#' \code{ScandalDataSet} object.
+#'
+#' @section Constructor:
+#' Constructs a \code{ScandalDataSet} object.
+#'
+#' @section Methods:
+#' \describe{
+#'   \item{\code{logtpm}}{Getter/setter for the logtpm assay}
+#'   \item{\code{childNodes}}{Getter/setter for childNodes}
+#'   \item{\code{parentNode}}{Getter/setter for the parentNode}
+#'   \item{\code{unprocessedData}}{Getter for the unprocessedData (read-only)}
+#'   \item{\code{preprocConfig}}{Getter/setter for the preprocConfig}
+#'   \item{\code{nodeID}}{Getter/setter for the nodeID}
+#'   \item{\code{projectID}}{Getter/setter for the projectID}
+#' }
+#'
+#' @examples
+#'
+#' @rdname ScandalDataSet
 #'
 #' @author Avishay Spitzer
 #'
@@ -44,22 +298,19 @@ setIs("ScandalDataSet", "ScandalDataSetOrNULL")
 ###
 
 #'
-#' @title
-#'
-#' @description
-#'
-#' @param ...
-#' @param childNodes
-#' @param parentNode
-#' @param preprocConfig
-#' @param nodeID
-#' @param projectID
-#'
-#' @details
-#'
-#' @return A ScandalDataSet object is returned from the constructor
-#'
-#' @author Avishay Spitzer
+#' @param ... arguments to pass to the \code{SingleCellExperiment} constructor.
+#' @param childNodes a \code{SimpleList} object containing the child nodes of the
+#' constructed \code{ScandalDataSet} object. Default is an empty \code{SimpleList}
+#' @param parentNode the parent node of the constructed \code{ScandalDataSet}
+#' object. Default is \code{NULL}, meaning that the constructed object has no
+#' parent.
+#' @param preprocConfig a configuration object of class \code{PreprocConfig}
+#' @param nodeID a unique identifier of the constructed \code{ScandalDataSet}
+#' object that should represent the specific sample. If not supplied a unique ID
+#' will be generated randomly however it is advised to set this field.
+#' @param projectID an identifier common to all the nodes in the constructed
+#' \code{ScandalDataSet} object.  If not supplied a unique ID
+#' will be generated randomly however it is advised to set this field.
 #'
 #' @export
 ScandalDataSet <- function(..., childNodes = S4Vectors::SimpleList(), parentNode = NULL, preprocConfig = DefaultPreprocConfig(), nodeID = NODE_ID(), projectID = PROJ_ID()) {
@@ -96,9 +347,9 @@ ScandalDataSet <- function(..., childNodes = S4Vectors::SimpleList(), parentNode
 
 setValidity("ScandalDataSet", function(object) {
 
-  is_child_sds <- sapply(childNodes(object), function(c) is(c, "ScandalDataSet"))
+  is_child_valid <- sapply(childNodes(object), function(c) is(c, "ScandalDataSet"))
 
-  if (!(base::all(is_child_sds) == TRUE))
+  if (!(base::all(ScandalDataSet) == TRUE))
     return (sprintf("Every child node must be a ScandalDataSet object"))
 
   return (TRUE)
@@ -108,56 +359,86 @@ setValidity("ScandalDataSet", function(object) {
 ### Getters and setters.
 ###
 
-#' @include AllGenerics.R
+#'
+#' @rdname ScandalDataSet
+#'
 #' @export
 setMethod("logtpm", "ScandalDataSet",   function(object, ...) {
   return (assay(object, i = "logtpm", ...))
 })
 
-#' @include AllGenerics.R
+#'
+#' @param value a value to replace the currently set value
+#'
+#' @rdname ScandalDataSet
+#'
 #' @export
 setReplaceMethod("logtpm", c("ScandalDataSet", "ANY"),   function(object, ..., value) {
   assay(object, i = "logtpm", ...) <- value
   return (object)
 })
 
+#'
+#' @rdname ScandalDataSet
+#'
 #' @export
 setMethod("childNodes", "ScandalDataSet", function(object) {
   return(object@childNodes)
 })
 
+#'
+#' @rdname ScandalDataSet
+#'
 #' @export
 setReplaceMethod("childNodes", "ScandalDataSet", function(object, value) {
   object@childNodes <- value
   return(object)
 })
 
+#'
+#' @rdname ScandalDataSet
+#'
 #' @export
 setMethod("parentNode", "ScandalDataSet", function(object) {
   return(object@parentNode)
 })
 
+#'
+#' @rdname ScandalDataSet
+#'
 #' @export
 setReplaceMethod("parentNode", "ScandalDataSet", function(object, value) {
   object@parentNode <- value
   return(object)
 })
 
+#'
+#' @rdname ScandalDataSet
+#'
 #' @export
 setMethod("nodeID", "ScandalDataSet", function(object) {
   return(object@nodeID)
 })
 
+#'
+#' @rdname ScandalDataSet
+#'
 #' @export
 setMethod("projectID", "ScandalDataSet", function(object) {
   return(object@projectID)
 })
 
+#'
+#' @rdname ScandalDataSet
+#'
 #' @export
 setMethod("sampleNames", "ScandalDataSet", function(object) {
   return(unique(gsub("*-.*", "", colnames(object))))
 })
 
+#'
+#' @rdname ScandalDataSet
+#'
 #' @export
 setMethod("unprocessedData", "ScandalDataSet", function(object) {
 
@@ -171,6 +452,9 @@ setMethod("unprocessedData", "ScandalDataSet", function(object) {
   return (o@unprocessedData[, .subset_cells(colnames(o@unprocessedData), sname), drop = FALSE])
 })
 
+#'
+#' @rdname ScandalDataSet
+#'
 #' @export
 setMethod("preprocConfig", "ScandalDataSet", function(object) {
   return(object@preprocConfig)
@@ -213,137 +497,5 @@ PROJ_ID <- function() { paste0("PROJ", base::sample(1:1e9, 1, replace = FALSE)) 
 
 ### -------------------------------------------------------------------------
 ### ScandalDataSet objects (end)
-### =========================================================================
-###
-
-### =========================================================================
-### PreprocConfig objects (start)
-### -------------------------------------------------------------------------
-###
-
-#' @export
-setClass("PreprocConfig",
-         slots = c(complexity_cutoff = "vector",
-                   expression_cutoff = "numeric",
-                   housekeeping_cutoff = "numeric",
-                   scaling_factor = "numeric",
-                   log_base = "numeric"))
-
-### - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-### Constructors
-###
-
-#' @export
-PreprocConfig <- function(complexity_cutoff, expression_cutoff, housekeeping_cutoff, log_base, scaling_factor) {
-  cp <- new("PreprocConfig")
-
-  cp@complexity_cutoff <- complexity_cutoff
-  cp@expression_cutoff <- expression_cutoff
-  cp@housekeeping_cutoff <- housekeeping_cutoff
-  cp@log_base <- log_base
-  cp@scaling_factor <- scaling_factor
-
-  return (cp)
-}
-
-#' @export
-NucseqPreprocConfig <- function() {
-  return (PreprocConfig(complexity_cutoff = c(2000, 6000), expression_cutoff = 5, housekeeping_cutoff = 7, log_base = 2, scaling_factor = 10))
-}
-
-#' @export
-SS2PreprocConfig <- function() {
-  return (PreprocConfig(complexity_cutoff = c(3000, 8000), expression_cutoff = 4, housekeeping_cutoff = 7, log_base = 2, scaling_factor = 10))
-}
-
-#' @export
-DefaultPreprocConfig <- function() {
-  return (NucseqPreprocConfig())
-}
-
-### - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-### Validity
-###
-
-setValidity("PreprocConfig", function(object) {
-  return(TRUE)
-})
-
-### - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-### Getters and setters.
-###
-
-#' @export
-setMethod("complexityCutoff", "PreprocConfig", function(x) {
-  return(x@complexity_cutoff)
-})
-
-#' @export
-setReplaceMethod("complexityCutoff", "PreprocConfig", function(x, value) {
-  x@complexity_cutoff <- value
-  return(x)
-})
-
-#' @export
-setMethod("expressionCutoff", "PreprocConfig", function(x) {
-  return(x@expression_cutoff)
-})
-
-#' @export
-setReplaceMethod("expressionCutoff", "PreprocConfig", function(x, value) {
-  x@expression_cutoff <- value
-  return(x)
-})
-
-#' @export
-setMethod("housekeepingCutoff", "PreprocConfig", function(x) {
-  return(x@housekeeping_cutoff)
-})
-
-#' @export
-setReplaceMethod("housekeepingCutoff", "PreprocConfig", function(x, value) {
-  x@housekeeping_cutoff <- value
-  return(x)
-})
-
-#' @export
-setMethod("scalingFactor", "PreprocConfig", function(x) {
-  return(x@scaling_factor)
-})
-
-#' @export
-setReplaceMethod("scalingFactor", "PreprocConfig", function(x, value) {
-  x@scaling_factor <- value
-  return(x)
-})
-
-#' @export
-setMethod("logBase", "PreprocConfig", function(x) {
-  return(x@log_base)
-})
-
-#' @export
-setReplaceMethod("logBase", "PreprocConfig", function(x, value) {
-  x@log_base <- value
-  return(x)
-})
-
-### - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-### Display
-###
-
-#' @export
-setMethod("show", "PreprocConfig", function(object) {
-  cat("Complexity cutoff:", complexityCutoff(object), "\n")
-  cat("Expression cutoff:", expressionCutoff(object), "\n")
-  cat("Housekeeping cutoff:", housekeepingCutoff(object), "\n")
-  cat("Scaling factor:", scalingFactor(object), "\n")
-  cat("Log base:", logBase(object), "\n")
-})
-
-is_config_object <- function(object) { return (!is.null(object) & is(object, "PreprocConfig")) }
-
-### -------------------------------------------------------------------------
-### PreprocConfig objects (end)
 ### =========================================================================
 ###

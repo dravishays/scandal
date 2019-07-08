@@ -2,24 +2,85 @@
 % Please edit documentation in R/preprocess.R
 \name{preprocess}
 \alias{preprocess}
-\title{}
+\title{Matrix preprocessing}
 \usage{
-preprocess(x, complexity_cutoff, housekeeping_cutoff, expression_cutoff,
-  log_base, scaling_factor, sample_id = "", cell_ids = NULL,
+preprocess(x, complexity_cutoff, expression_cutoff, housekeeping_cutoff,
+  log_base, scaling_factor, sample_id = NULL, cell_ids = NULL,
   forced_genes_set = NULL, use_housekeeping_filter = FALSE,
   verbose = FALSE)
 }
 \arguments{
-\item{use_housekeeping_filter}{}
+\item{x}{a numeric matrix.}
+
+\item{complexity_cutoff}{a numeric vector of length 2 representing the lower and
+upper bounds of complexity (i.e. the number of detected genes per cell).}
+
+\item{expression_cutoff}{a numeric representing the minimal log2 mean expression
+per gene below which a gene is considered lowly expressed.}
+
+\item{housekeeping_cutoff}{a numeric representing the log2 mean expression of
+house-keeping genes (i.e. genes that are highly expressed in all cells) per
+cell below which a cell is considered low quality.}
+
+\item{log_base}{a numeric representing the logarithm base for performing log
+transformation on the data.}
+
+\item{scaling_factor}{a numeric representing a scaling factor by which to divide
+each data point before log transformation.}
+
+\item{sample_id}{an ID of the sample being processed. Used only for printing and hence
+is not a mandatory parameter. Default is NULL.}
+
+\item{cell_ids}{a charactyer vector containing IDs of cells that already passed QC.
+enables bypassing the low-quality cells filtering step.}
+
+\item{forced_genes_set}{a vector of genes that should be included in the final
+processed object even if their expression is low with the exception of forced
+genes with absolute count equals to zero which will be filtered out. Default is NULL.}
+
+\item{use_housekeeping_filter}{should cells with low expression of housekeeping genes
+should be filtered out. Default is FALSE.}
+
+\item{forced_genes_set}{a vector of genes that should be included in the final
+processed object even if their expression is low with the exception of forced
+genes with absolute count equals to zero which will be filtered out. Default is NULL.}
 }
 \value{
-
+A processed matrix ready for downstream analysis.
 }
 \description{
-
+Performs preprocessing of a matrix object including breaking
+up the dataset into objects representing the specific samples, filtering out low
+quality cells and lowly expressed genes, log transforming and centering.
 }
 \details{
+This function is performs the matrix preprocessing steps and is used for
+preprocessing \linkS4class{ScandalDataSet} objects to allow downstream analysis.
 
+The main steps of preprocessing are as follows:
+\enumerate{
+  \item Filtering out low quality cells (cells with low complexity) by summing-up for
+  each cell (column) the number of genes with count greater than zero and removing
+  the cells outside the complexity cutoff range configured for the specific sample
+  in \code{complexity_cutoff}.
+  \item A possible step of filtering out cells with low expression of house-keeping
+  genes, i.e. genes that are normally highly expressed in most cells (for example,
+  genes that encode ribosomes). Cells with mean expression of HK genes less than the
+  housekeeping cutoff configured  for the specific sample in \code{housekeeping_cutoff}
+  will be removed.
+  \item Filtering out lowly expressed genes i.e. genes with log2 mean expression less
+  than the expression cutoff range configured for the specific sample in
+  \code{expression_cutoff}.
+  \item Log-transforming the expression data.
+  \item Mean-centering the expression data gene-wise (i.e. subtracting from each row
+  the mean of the row).
+}
+}
+\note{
+The function assumes that each column represents a cell and each row represents a gene.
+}
+\seealso{
+\code{\link{scandal_preprocess}}
 }
 \author{
 Avishay Spitzer

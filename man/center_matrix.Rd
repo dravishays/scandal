@@ -20,9 +20,6 @@ A matrix with either mean or median of row/column centered around zero.
 Centers the mean/median of each row/column of the given matrix
 around zero.
 }
-\details{
-
-}
 \examples{
 # Center the mean of each row around zero
 m <- matrix(runif(25, 0, 100), nrow = 5, ncol = 5) # Generate a 5x5 numeric matrix

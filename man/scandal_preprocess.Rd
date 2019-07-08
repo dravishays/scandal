@@ -8,28 +8,55 @@ scandal_preprocess(object, preproc_config_list, forced_genes_set = NULL,
   use_housekeeping_filter = FALSE, verbose = FALSE)
 }
 \arguments{
-\item{object}{a ScandalDataSet object.}
+\item{object}{a ScandalDataSet object (the underlying object).}
 
 \item{preproc_config_list}{a named list of containing a \linkS4class{PreprocConfig}
-object for each sample. The names should represent the sample name.}
+object for each sample. The names should correspond to the sample name.}
 
 \item{forced_genes_set}{a vector of genes that should be included in the final
 processed object even if their expression is low with the exception of forced
 genes with absolute count equals to zero which will be filtered out. Default is NULL.}
 
-\item{use_housekeeping_filter}{should cells with low expression of housekeeping genes
-should be filtered out. Default is FALSE.}
+\item{use_housekeeping_filter}{should cells with low expression of house-keeping genes
+be filtered out. Default is FALSE.}
 }
 \value{
 A processed ScandalDataSet object ready for analysis.
 }
 \description{
 Performs preprocessing of ScandalDataSet objects including breaking
-up the dataset into sample-specific objects, filtering out low quality cells and
-lowly expressed genes, log transforming and centering.
+up the dataset into objects representing the specific samples, filtering out low
+quality cells and lowly expressed genes, log transforming and centering.
 }
 \details{
+This function is the entry point for preprocessing a \linkS4class{ScandalDataSet}
+object to allow downstream analysis.
 
+The main steps of preprocessing are as follows:
+\enumerate{
+  \item Create a \linkS4class{ScandalDataSet} object for each individual (samples
+  are identified by the names of the \code{preproc_config_list} components).
+  \item Filtering out low quality cells (cells with low complexity) by summing-up for
+  each cell (column) the number of genes with count greater than zero and removing
+  the cells outside the complexity cutoff range configured for the specific sample
+  in \code{preproc_config_list}.
+  \item A possible step of filtering out cells with low expression of house-keeping
+  genes, i.e. genes that are normally highly expressed in most cells (for example,
+  genes that encode ribosomes). Cells with mean expression of HK genes less than the
+  housekeeping cutoff configured  for the specific sample in \code{preproc_config_list}
+  will be removed.
+  \item Filtering out lowly expressed genes i.e. genes with log2 mean expression less
+  than the expression cutoff range configured for the specific sample in
+  \code{preproc_config_list}.
+  \item Log-transforming the expression data.
+  \item Mean-centering the expression data gene-wise (i.e. subtracting from each row
+  the mean of the row).
+  \item The \linkS4class{ScandalDataSet} object is added to the \code{childNodes} slot
+  of underlying \code{object}
+  \item The underlying \code{object} is preprocessed in the same way described above
+  beside cell filtering (the cells that passed qaulity control are aggregated from
+  the childNodes objects) to allow plotting all cells together in downstream analysis.
+}
 }
 \examples{
 

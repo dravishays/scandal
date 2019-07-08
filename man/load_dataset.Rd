@@ -4,19 +4,32 @@
 \alias{load_dataset}
 \title{Load dataset from file}
 \usage{
-load_dataset(filename, drop_cols = 2, rownames_col = 1,
+load_dataset(filename, drop_cols = 1, rownames_col = 1,
   excluded_samples = NULL, verbose = FALSE)
 }
 \arguments{
-\item{excluded_samples}{}
+\item{filename}{the name of the file containing the dataset (in tab-delimited
+format)}
+
+\item{drop_cols}{number of columns that should be dropped from the dataset,
+i.e. if drop_cols == 3 then columns 1:3 will be dropped. Default is 1}
+
+\item{rownames_col}{the column that contains the rownames, i.e. gene symbols
+or identifiers. Default is 1}
+
+\item{excluded_samples}{a vector containing the names of the samples that
+should be excluded from the returned dataset. Defaults to NULL}
 }
 \value{
 
 }
 \description{
-
+Loads a dataset from file
 }
 \details{
+
+}
+\examples{
 
 }
 \author{

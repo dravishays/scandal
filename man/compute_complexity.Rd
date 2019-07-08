@@ -22,9 +22,6 @@ A named vector of complexity per cell ID.
 Computes the complexity, i.e. the number of genes with count
 greater than zero for each cell (column).
 }
-\details{
-
-}
 \examples{
 
 }

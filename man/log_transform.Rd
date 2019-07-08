@@ -30,9 +30,6 @@ A log-transformed numeric object.
 Performs log transformation on a numeric object. The data can be
 scaled first if requested by dividing X by the provided scaling factor.
 }
-\details{
-
-}
 \section{Functions}{
 \itemize{
 \item \code{reverse_log_transform}: Reverses the log transformation, i.e \deqn{(log_base^x * scaling_factor) - pseudo_count}

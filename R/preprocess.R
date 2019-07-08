@@ -2,9 +2,10 @@
 #'
 #' @title Load dataset from file
 #'
-#' @description Loads a dataset
+#' @description Loads a dataset from file
 #'
-#' @param filename the name of a tab-delimited file containing the dataset
+#' @param filename the name of the file containing the dataset (in tab-delimited
+#' format)
 #' @param drop_cols number of columns that should be dropped from the dataset,
 #' i.e. if drop_cols == 3 then columns 1:3 will be dropped. Default is 1
 #' @param rownames_col the column that contains the rownames, i.e. gene symbols
@@ -15,6 +16,8 @@
 #' @details
 #'
 #' @return
+#'
+#' @examples
 #'
 #' @author Avishay Spitzer
 #'
@@ -31,7 +34,7 @@ load_dataset <- function(filename, drop_cols = 1, rownames_col = 1, excluded_sam
   dataset <- utils::read.delim(filename, header = TRUE, sep = '\t', stringsAsFactors = FALSE)
 
   #tpm_data[, rownames_col][c(11570, 11573)] <- c("MARCH1", "MARCH2")
-  rownames(tpm_data) <- dataset[, rownames_col]
+  rownames(dataset) <- dataset[, rownames_col]
 
   dataset <- dataset[, -seq_len(drop_cols)]
 
@@ -57,19 +60,46 @@ load_dataset <- function(filename, drop_cols = 1, rownames_col = 1, excluded_sam
 #' @title Scandal object preprocessing
 #'
 #' @description Performs preprocessing of ScandalDataSet objects including breaking
-#' up the dataset into sample-specific objects, filtering out low quality cells and
-#' lowly expressed genes, log transforming and centering.
+#' up the dataset into objects representing the specific samples, filtering out low
+#' quality cells and lowly expressed genes, log transforming and centering.
 #'
-#' @param object a ScandalDataSet object.
+#' @param object a ScandalDataSet object (the underlying object).
 #' @param preproc_config_list a named list of containing a \linkS4class{PreprocConfig}
-#' object for each sample. The names should represent the sample name.
+#' object for each sample. The names should correspond to the sample name.
 #' @param forced_genes_set a vector of genes that should be included in the final
 #' processed object even if their expression is low with the exception of forced
 #' genes with absolute count equals to zero which will be filtered out. Default is NULL.
-#' @param use_housekeeping_filter should cells with low expression of housekeeping genes
-#' should be filtered out. Default is FALSE.
+#' @param use_housekeeping_filter should cells with low expression of house-keeping genes
+#' be filtered out. Default is FALSE.
 #'
-#' @details
+#' @details This function is the entry point for preprocessing a \linkS4class{ScandalDataSet}
+#' object to allow downstream analysis.
+#'
+#' The main steps of preprocessing are as follows:
+#' \enumerate{
+#'   \item Create a \linkS4class{ScandalDataSet} object for each individual (samples
+#'   are identified by the names of the \code{preproc_config_list} components).
+#'   \item Filtering out low quality cells (cells with low complexity) by summing-up for
+#'   each cell (column) the number of genes with count greater than zero and removing
+#'   the cells outside the complexity cutoff range configured for the specific sample
+#'   in \code{preproc_config_list}.
+#'   \item A possible step of filtering out cells with low expression of house-keeping
+#'   genes, i.e. genes that are normally highly expressed in most cells (for example,
+#'   genes that encode ribosomes). Cells with mean expression of HK genes less than the
+#'   housekeeping cutoff configured  for the specific sample in \code{preproc_config_list}
+#'   will be removed.
+#'   \item Filtering out lowly expressed genes i.e. genes with log2 mean expression less
+#'   than the expression cutoff range configured for the specific sample in
+#'   \code{preproc_config_list}.
+#'   \item Log-transforming the expression data.
+#'   \item Mean-centering the expression data gene-wise (i.e. subtracting from each row
+#'   the mean of the row).
+#'   \item The \linkS4class{ScandalDataSet} object is added to the \code{childNodes} slot
+#'   of underlying \code{object}
+#'   \item The underlying \code{object} is preprocessed in the same way described above
+#'   beside cell filtering (the cells that passed qaulity control are aggregated from
+#'   the childNodes objects) to allow plotting all cells together in downstream analysis.
+#' }
 #'
 #' @return A processed ScandalDataSet object ready for analysis.
 #'
@@ -104,31 +134,70 @@ scandal_preprocess <- function(object, preproc_config_list, forced_genes_set = N
 }
 
 #'
-#' @title
+#' @title Matrix preprocessing
 #'
-#' @description
+#' @description Performs preprocessing of a matrix object including breaking
+#' up the dataset into objects representing the specific samples, filtering out low
+#' quality cells and lowly expressed genes, log transforming and centering.
 #'
-#' @param x
-#' @param complexity_cutoff
-#' @param housekeeping_cutoff
-#' @param expression_cutoff
-#' @param log_base
-#' @param scaling_factor
-#' @param forced_genes_set
-#' @param sample_id
-#' @param cell_ids
-#' @param forced_genes_set
-#' @param use_housekeeping_filter
+#' @param x a numeric matrix.
+#' @param complexity_cutoff a numeric vector of length 2 representing the lower and
+#' upper bounds of complexity (i.e. the number of detected genes per cell).
+#' @param expression_cutoff a numeric representing the minimal log2 mean expression
+#' per gene below which a gene is considered lowly expressed.
+#' @param housekeeping_cutoff a numeric representing the log2 mean expression of
+#' house-keeping genes (i.e. genes that are highly expressed in all cells) per
+#' cell below which a cell is considered low quality.
+#' @param log_base a numeric representing the logarithm base for performing log
+#' transformation on the data.
+#' @param scaling_factor a numeric representing a scaling factor by which to divide
+#' each data point before log transformation.
+#' @param cell_ids a charactyer vector containing IDs of cells that already passed QC.
+#' enables bypassing the low-quality cells filtering step.
+#' @param forced_genes_set a vector of genes that should be included in the final
+#' processed object even if their expression is low with the exception of forced
+#' genes with absolute count equals to zero which will be filtered out. Default is NULL.
+#' @param sample_id an ID of the sample being processed. Used only for printing and hence
+#' is not a mandatory parameter. Default is NULL.
+#' @param forced_genes_set a vector of genes that should be included in the final
+#' processed object even if their expression is low with the exception of forced
+#' genes with absolute count equals to zero which will be filtered out. Default is NULL.
+#' @param use_housekeeping_filter should cells with low expression of housekeeping genes
+#' should be filtered out. Default is FALSE.
 #'
-#' @details
+#' @details This function is performs the matrix preprocessing steps and is used for
+#' preprocessing \linkS4class{ScandalDataSet} objects to allow downstream analysis.
 #'
-#' @return
+#' The main steps of preprocessing are as follows:
+#' \enumerate{
+#'   \item Filtering out low quality cells (cells with low complexity) by summing-up for
+#'   each cell (column) the number of genes with count greater than zero and removing
+#'   the cells outside the complexity cutoff range configured for the specific sample
+#'   in \code{complexity_cutoff}.
+#'   \item A possible step of filtering out cells with low expression of house-keeping
+#'   genes, i.e. genes that are normally highly expressed in most cells (for example,
+#'   genes that encode ribosomes). Cells with mean expression of HK genes less than the
+#'   housekeeping cutoff configured  for the specific sample in \code{housekeeping_cutoff}
+#'   will be removed.
+#'   \item Filtering out lowly expressed genes i.e. genes with log2 mean expression less
+#'   than the expression cutoff range configured for the specific sample in
+#'   \code{expression_cutoff}.
+#'   \item Log-transforming the expression data.
+#'   \item Mean-centering the expression data gene-wise (i.e. subtracting from each row
+#'   the mean of the row).
+#' }
+#'
+#' @return A processed matrix ready for downstream analysis.
+#'
+#' @note The function assumes that each column represents a cell and each row represents a gene.
+#'
+#' @seealso \code{\link{scandal_preprocess}}
 #'
 #' @author Avishay Spitzer
 #'
 #' @export
-preprocess <- function(x, complexity_cutoff, housekeeping_cutoff, expression_cutoff, log_base, scaling_factor,
-                       sample_id = "", cell_ids = NULL, forced_genes_set = NULL, use_housekeeping_filter = FALSE, verbose = FALSE) {
+preprocess <- function(x, complexity_cutoff, expression_cutoff, housekeeping_cutoff, log_base, scaling_factor,
+                       sample_id = NULL, cell_ids = NULL, forced_genes_set = NULL, use_housekeeping_filter = FALSE, verbose = FALSE) {
 
   stopifnot(is_valid_assay(x),
             (is.vector(complexity_cutoff) & is.numeric(complexity_cutoff)),
@@ -178,7 +247,7 @@ preprocess <- function(x, complexity_cutoff, housekeeping_cutoff, expression_cut
   x <- x[filter_lowly_expressed_genes(x, expression_cutoff = expression_cutoff, forced_genes_set = forced_genes_set, verbose = verbose), ]
 
   if (isTRUE(verbose))
-    message(paste0("Log transforming TPM matrix, (base - ", log_base, ", scaling factor - ", scaling_factor, ")"))
+    message(paste0("Log transforming matrix, (base - ", log_base, ", scaling factor - ", scaling_factor, ")"))
 
   x <- log_transform(x, log_base = log_base, scaling_factor = scaling_factor, verbose = verbose)
 
@@ -211,8 +280,6 @@ preprocess <- function(x, complexity_cutoff, housekeeping_cutoff, expression_cut
 #' divided prior to log computation. Default is 1, i.e. no scaling
 #' @param pseudo_count a positive number which will be added to the possibly scaled
 #' x prior to log computation to avoid taking the logarithm of zero. Default is 1
-#'
-#' @details
 #'
 #' @return A log-transformed numeric object.
 #'
@@ -258,8 +325,6 @@ reverse_log_transform <- function(x, log_base = 2, scaling_factor = 1, pseudo_co
 #' @param cell_subset a vector of cell IDs for which the complexity should be
 #' calculated. Default is NULL
 #'
-#' @details
-#'
 #' @return A named vector of complexity per cell ID.
 #'
 #' @examples
@@ -293,8 +358,6 @@ compute_complexity <- function(x, return_sorted = FALSE, cell_subset = NULL, ver
 #' @param by either "row" or "col". Default is "row"
 #' @param method either "mean" or "median". Default is "mean"
 #'
-#' @details
-#'
 #' @return A matrix with either mean or median of row/column centered around zero.
 #'
 #' @examples
@@ -326,6 +389,7 @@ center_matrix <- function(x, by = "row", method = "mean", verbose = FALSE) {
   return (x)
 }
 
+# Not exported
 filter_low_quality_cells <- function(x, complexity_cutoff, verbose = FALSE) {
 
   stopifnot(is_valid_assay(x), is.numeric(complexity_cutoff), length(complexity_cutoff) == 2, complexity_cutoff[1] >= 0, complexity_cutoff[2] > complexity_cutoff[1])
@@ -345,6 +409,7 @@ filter_low_quality_cells <- function(x, complexity_cutoff, verbose = FALSE) {
   return (names(passQC))
 }
 
+# Not exported
 filter_low_housekeeping_cells <- function(x, housekeeping_cutoff, verbose = FALSE) {
 
   stopifnot(is_valid_assay(x), is.numeric(housekeeping_cutoff), housekeeping_cutoff > 0)
@@ -363,6 +428,7 @@ filter_low_housekeeping_cells <- function(x, housekeeping_cutoff, verbose = FALS
   return (names(passQC))
 }
 
+# Not exported
 filter_lowly_expressed_genes <- function(x, expression_cutoff, forced_genes_set = NULL, verbose = FALSE) {
 
   stopifnot(is_valid_assay(x), is.numeric(expression_cutoff), expression_cutoff > 0, (is.null(forced_genes_set) | is.vector(forced_genes_set)))
@@ -501,8 +567,8 @@ plot_mean_expression_frequency <- function(object, show_plot = TRUE, save_to_fil
   # Call the matrix preprocessing function
   x <- preprocess(x,
                   complexity_cutoff = complexityCutoff(preproc_config),
-                  housekeeping_cutoff = housekeepingCutoff(preproc_config),
                   expression_cutoff = expressionCutoff(preproc_config),
+                  housekeeping_cutoff = housekeepingCutoff(preproc_config),
                   log_base = logBase(preproc_config),
                   scaling_factor = scalingFactor(preproc_config),
                   sample_id = nodeID(object), cell_ids = cell_ids,
