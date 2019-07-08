@@ -1,0 +1,24 @@
+
+#' @title scandal: a package for single-cell analysis
+#'
+#' @description The scandal package provides a framework for performing analysis of
+#' single-cell sequencing data and is oriented for analyzing cancer-related data.
+#'
+#' @section Classes:
+#' \describe{
+#'   \item{\code{ScandalDataSet}}{The main data structure of the package.}
+#'   \item{\code{PreprocConfig}}{Maintains preprocessing configuration parameters.}
+#' }
+#'
+#' @section Functions:
+#' \describe{
+#'   \item{\code{load_dataset}}{Loads a dataset from file.}
+#'   \item{\code{scandal_preprocess}}{Performs preprocessing of a dataset to enable
+#'   downstream analysis.}
+#' }
+#'
+#' @author Avishay Spitzer
+#'
+#' @docType package
+#' @name scandal
+NULL

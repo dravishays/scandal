@@ -17,10 +17,14 @@
 \alias{logBase<-,PreprocConfig-method}
 \alias{scalingFactor,PreprocConfig-method}
 \alias{scalingFactor<-,PreprocConfig-method}
+\alias{pseudoCount,PreprocConfig-method}
+\alias{pseudoCount<-,PreprocConfig-method}
+\alias{typeMatrix,PreprocConfig-method}
+\alias{typeMatrix<-,PreprocConfig-method}
 \title{PreprocConfig class}
 \usage{
 PreprocConfig(complexityCutoff, expressionCutoff, housekeepingCutoff,
-  logBase, scalingFactor)
+  logBase, scalingFactor, pseudoCount, typeMatrix)
 
 NucseqPreprocConfig()
 
@@ -47,6 +51,14 @@ DefaultPreprocConfig()
 \S4method{scalingFactor}{PreprocConfig}(x)
 
 \S4method{scalingFactor}{PreprocConfig}(x) <- value
+
+\S4method{pseudoCount}{PreprocConfig}(x)
+
+\S4method{pseudoCount}{PreprocConfig}(x) <- value
+
+\S4method{typeMatrix}{PreprocConfig}(x)
+
+\S4method{typeMatrix}{PreprocConfig}(x) <- value
 }
 \description{
 An S4 class for storing preprocessing configuration parameters.
@@ -69,20 +81,27 @@ generated from fresh samples using SmartSeq2 protocol.
 
 \describe{
 \item{\code{complexityCutoff}}{A numeric vector of length 2 representing the lower and
-upper bounds of complexity (i.e. the number of detected genes per cell)}
+upper bounds of complexity (i.e. the number of detected genes per cell).}
 
 \item{\code{expressionCutoff}}{A numeric representing the minimal log2 mean expression
-per gene below which a gene is considered lowly expressed}
+per gene below which a gene is considered lowly expressed.}
 
 \item{\code{housekeepingCutoff}}{A numeric representing the log2 mean expression of
 house-keeping genes (i.e. genes that are highly expressed in all cells) per
-cell below which a cell is considered low quality}
+cell below which a cell is considered low quality.}
 
 \item{\code{logBase}}{A numeric representing the logarithm base for performing log
-transformation on the data}
+transformation on the data.}
 
 \item{\code{scalingFactor}}{A numeric representing a scaling factor by which to divide
-each data point before log transformation}
+each data point before log transformation.}
+
+\item{\code{pseudoCount}}{A numeric representing the pseudo count added when performing
+log transformation to avoid taking the log of zero.}
+
+\item{\code{typeMatrix}}{A logical indicating if the dataset should be represented using
+the S4 Matrix class (instead of base R matrix) to reduce memory overhead using
+sparse matrix representation.}
 }}
 
 \section{Methods}{
@@ -93,11 +112,13 @@ each data point before log transformation}
   \item{\code{housekeepingCutoff}}{Getter/setter for the housekeeping cutoff}
   \item{\code{logBase}}{Getter/setter for the log base}
   \item{\code{scalingFactor}}{Getter/setter for the scaling factor}
+  \item{\code{pseudoCount}}{Getter/setter for the pseudo count}
+  \item{\code{typeMatrix}}{Getter/setter for the Matrix type}
 }
 }
 
 \examples{
-pc <- PreprocConfig(complexityCutoff = c(0, 10000), expressionCutoff = 5, housekeepingCutoff = 7, logBase = 2, scalingFactor = 10)
+pc <- PreprocConfig(complexityCutoff = c(0, 10000), expressionCutoff = 5, housekeepingCutoff = 7, logBase = 2, scalingFactor = 10, pseudoCount = 1, typeMatrix = TRUE)
 
 }
 \author{

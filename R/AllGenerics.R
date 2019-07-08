@@ -71,3 +71,15 @@ setGeneric("logBase", function(x, ...) standardGeneric("logBase"))
 
 #' @export
 setGeneric("logBase<-", function(x, ..., value) standardGeneric("logBase<-"))
+
+#' @export
+setGeneric("pseudoCount", function(x, ...) standardGeneric("pseudoCount"))
+
+#' @export
+setGeneric("pseudoCount<-", function(x, ..., value) standardGeneric("pseudoCount<-"))
+
+#' @export
+setGeneric("typeMatrix", function(x, ...) standardGeneric("typeMatrix"))
+
+#' @export
+setGeneric("typeMatrix<-", function(x, ..., value) standardGeneric("typeMatrix<-"))

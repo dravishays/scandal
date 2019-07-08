@@ -39,3 +39,4 @@ Collate:
     'gene_sets.R'
     'plotting.R'
     'preprocess.R'
+    'scandal.R'

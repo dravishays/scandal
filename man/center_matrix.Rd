@@ -4,14 +4,19 @@
 \alias{center_matrix}
 \title{Centers a matrix}
 \usage{
-center_matrix(x, by = "row", method = "mean", verbose = FALSE)
+center_matrix(x, by = "row", method = "mean", scale = FALSE,
+  verbose = FALSE)
 }
 \arguments{
-\item{x}{a numeric matrix or Matrix object}
+\item{x}{a numeric matrix or Matrix object.}
 
-\item{by}{either "row" or "col". Default is "row"}
+\item{by}{either "row" or "col". Default is "row".}
 
-\item{method}{either "mean" or "median". Default is "mean"}
+\item{method}{either "mean" or "median". Default is "mean".}
+
+\item{scale}{logical indicating whether to scale the rows/columns of x, i.e.
+divide each row/column by the standard deviation of the row/column. Default
+is FALSE.}
 }
 \value{
 A matrix with either mean or median of row/column centered around zero.
@@ -23,13 +28,13 @@ around zero.
 \examples{
 # Center the mean of each row around zero
 m <- matrix(runif(25, 0, 100), nrow = 5, ncol = 5) # Generate a 5x5 numeric matrix
-m <- center_matrix(m, by = "row", method = "mean") # Center
+m <- center_matrix(m, by = "row", method = "mean", scale = FALSE) # Center
 all(rowMeans(m) == 0) # TRUE
 all(colMeans(m) == 0) # FALSE
 
 # Center the median of each column around zero
 m <- matrix(runif(25, 0, 100), nrow = 5, ncol = 5) # Generate a 5x5 numeric matrix
-m <- center_matrix(m, by = "col", method = "median") # Center
+m <- center_matrix(m, by = "col", method = "median", scale = FALSE) # Center
 all(rowMedians(m) == 0) # FALSE
 all(colMedians(m) == 0) # TRUE
 

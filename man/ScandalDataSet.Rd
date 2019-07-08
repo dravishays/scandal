@@ -17,6 +17,7 @@
 \alias{preprocConfig,ScandalDataSet-method}
 \title{ScandalDataSet class}
 \usage{
+## Constructor
 ScandalDataSet(..., childNodes = S4Vectors::SimpleList(),
   parentNode = NULL, preprocConfig = DefaultPreprocConfig(),
   nodeID = NODE_ID(), projectID = PROJ_ID())
@@ -63,7 +64,7 @@ will be generated randomly however it is advised to set this field.}
 \code{ScandalDataSet} object.  If not supplied a unique ID
 will be generated randomly however it is advised to set this field.}
 
-\item{value}{a value to replace the currently set value}
+\item{value}{a value to replace the currently set value (applies to all setter methods).}
 }
 \description{
 An S4 class for storing single-cell seqeuncing data, analysis
@@ -105,8 +106,8 @@ Constructs a \code{ScandalDataSet} object.
   \item{\code{logtpm}}{Getter/setter for the logtpm assay}
   \item{\code{childNodes}}{Getter/setter for childNodes}
   \item{\code{parentNode}}{Getter/setter for the parentNode}
-  \item{\code{unprocessedData}}{Getter/setter for the unprocessedData}
-  \item{\code{preprocConfig}}{Getter/setter for the preprocConfig}
+  \item{\code{unprocessedData}}{Getter for the unprocessedData (read-only)}
+  \item{\code{preprocConfig}}{Getter for the preprocConfig (read-only)}
   \item{\code{nodeID}}{Getter/setter for the nodeID}
   \item{\code{projectID}}{Getter/setter for the projectID}
 }

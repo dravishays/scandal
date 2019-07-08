@@ -5,13 +5,16 @@
 #' @description Loads a dataset from file
 #'
 #' @param filename the name of the file containing the dataset (in tab-delimited
-#' format)
+#' format).
 #' @param drop_cols number of columns that should be dropped from the dataset,
-#' i.e. if drop_cols == 3 then columns 1:3 will be dropped. Default is 1
+#' i.e. if drop_cols == 3 then columns 1:3 will be dropped. Default is 1.
 #' @param rownames_col the column that contains the rownames, i.e. gene symbols
-#' or identifiers. Default is 1
+#' or identifiers. Default is 1.
 #' @param excluded_samples a vector containing the names of the samples that
-#' should be excluded from the returned dataset. Defaults to NULL
+#' should be excluded from the returned dataset. Defaults to NULL.
+#' @param as_Matrix logical indicating whether the loaded dataset should be returned
+#' as an S4 Matrix class (supports sparse representation) or base R matrix type.
+#' Default is TRUE.
 #'
 #' @details
 #'
@@ -22,11 +25,12 @@
 #' @author Avishay Spitzer
 #'
 #' @export
-load_dataset <- function(filename, drop_cols = 1, rownames_col = 1, excluded_samples = NULL, verbose = FALSE) {
+load_dataset <- function(filename, drop_cols = 1, rownames_col = 1, excluded_samples = NULL, as_Matrix = TRUE, verbose = FALSE) {
 
   stopifnot(is.character(filename), base::file.exists(filename))
   stopifnot(is.integer(drop_cols), is.integer(rownames_col), drop_cols > 0, rownames_col > 0)
   stopifnot(is.null(excluded_samples) | (is.vector(excluded_samples) & is.character(excluded_samples)))
+  stopifnot(is.logical(as_Matrix))
 
   if (isTRUE(verbose))
     message("Loading dataset from ", filename)
@@ -51,7 +55,10 @@ load_dataset <- function(filename, drop_cols = 1, rownames_col = 1, excluded_sam
       message("Excluding ", length(excluded_samples), " samples from dataset which now contains ", nrow(dataset), " rows and ", ncol(dataset), " columns")
   }
 
-  dataset <- methods::as(dataset, "Matrix")
+  if (isTRUE(as_Matrix))
+    dataset <- methods::as(dataset, "Matrix")
+  else
+    dataset <- as.matrix(dataset)
 
   return (dataset)
 }
@@ -61,7 +68,7 @@ load_dataset <- function(filename, drop_cols = 1, rownames_col = 1, excluded_sam
 #'
 #' @description Performs preprocessing of ScandalDataSet objects including breaking
 #' up the dataset into objects representing the specific samples, filtering out low
-#' quality cells and lowly expressed genes, log transforming and centering.
+#' quality cells and lowly expressed genes and log transforming.
 #'
 #' @param object a ScandalDataSet object (the underlying object).
 #' @param preproc_config_list a named list of containing a \linkS4class{PreprocConfig}
@@ -92,8 +99,6 @@ load_dataset <- function(filename, drop_cols = 1, rownames_col = 1, excluded_sam
 #'   than the expression cutoff range configured for the specific sample in
 #'   \code{preproc_config_list}.
 #'   \item Log-transforming the expression data.
-#'   \item Mean-centering the expression data gene-wise (i.e. subtracting from each row
-#'   the mean of the row).
 #'   \item The \linkS4class{ScandalDataSet} object is added to the \code{childNodes} slot
 #'   of underlying \code{object}
 #'   \item The underlying \code{object} is preprocessed in the same way described above
@@ -138,7 +143,7 @@ scandal_preprocess <- function(object, preproc_config_list, forced_genes_set = N
 #'
 #' @description Performs preprocessing of a matrix object including breaking
 #' up the dataset into objects representing the specific samples, filtering out low
-#' quality cells and lowly expressed genes, log transforming and centering.
+#' quality cells and lowly expressed genes and log transforming.
 #'
 #' @param x a numeric matrix.
 #' @param complexity_cutoff a numeric vector of length 2 representing the lower and
@@ -152,6 +157,8 @@ scandal_preprocess <- function(object, preproc_config_list, forced_genes_set = N
 #' transformation on the data.
 #' @param scaling_factor a numeric representing a scaling factor by which to divide
 #' each data point before log transformation.
+#' @param pseudo_count a numeric representing the pseudo count added when performing
+#' log transformation to avoid taking the log of zero.
 #' @param cell_ids a charactyer vector containing IDs of cells that already passed QC.
 #' enables bypassing the low-quality cells filtering step.
 #' @param forced_genes_set a vector of genes that should be included in the final
@@ -183,8 +190,6 @@ scandal_preprocess <- function(object, preproc_config_list, forced_genes_set = N
 #'   than the expression cutoff range configured for the specific sample in
 #'   \code{expression_cutoff}.
 #'   \item Log-transforming the expression data.
-#'   \item Mean-centering the expression data gene-wise (i.e. subtracting from each row
-#'   the mean of the row).
 #' }
 #'
 #' @return A processed matrix ready for downstream analysis.
@@ -196,7 +201,7 @@ scandal_preprocess <- function(object, preproc_config_list, forced_genes_set = N
 #' @author Avishay Spitzer
 #'
 #' @export
-preprocess <- function(x, complexity_cutoff, expression_cutoff, housekeeping_cutoff, log_base, scaling_factor,
+preprocess <- function(x, complexity_cutoff, expression_cutoff, housekeeping_cutoff, log_base, scaling_factor, pseudo_count,
                        sample_id = NULL, cell_ids = NULL, forced_genes_set = NULL, use_housekeeping_filter = FALSE, verbose = FALSE) {
 
   stopifnot(is_valid_assay(x),
@@ -205,6 +210,7 @@ preprocess <- function(x, complexity_cutoff, expression_cutoff, housekeeping_cut
             is.numeric(expression_cutoff),
             is.numeric(log_base),
             is.numeric(scaling_factor),
+            is.numeric(pseudo_count),
             (is.null(forced_genes_set) | is.vector(forced_genes_set)),
             (is.null(cell_ids) | is.vector(cell_ids)),
             is.logical(use_housekeeping_filter))
@@ -247,14 +253,14 @@ preprocess <- function(x, complexity_cutoff, expression_cutoff, housekeeping_cut
   x <- x[filter_lowly_expressed_genes(x, expression_cutoff = expression_cutoff, forced_genes_set = forced_genes_set, verbose = verbose), ]
 
   if (isTRUE(verbose))
-    message(paste0("Log transforming matrix, (base - ", log_base, ", scaling factor - ", scaling_factor, ")"))
+    message(paste0("Log transforming matrix, (base - ", log_base, ", scaling factor - ", scaling_factor, ", pseudo count - ", pseudo_count, ")"))
 
-  x <- log_transform(x, log_base = log_base, scaling_factor = scaling_factor, verbose = verbose)
+  x <- log_transform(x, log_base = log_base, scaling_factor = scaling_factor, pseudo_count = pseudo_count, verbose = verbose)
 
-  if (isTRUE(verbose))
-    message("Centering matrix...")
-
-  x <- center_matrix(x, by = "row", method = "mean", verbose = verbose)
+  # if (isTRUE(verbose))
+  #   message("Centering matrix...")
+  #
+  # x <- center_matrix(x, by = "row", method = "mean", verbose = verbose)
 
   sparcity_after_qc <- length(which(x == 0)) / (dim(x)[1] * dim(x)[2]) * 100
 
@@ -354,37 +360,46 @@ compute_complexity <- function(x, return_sorted = FALSE, cell_subset = NULL, ver
 #' @description Centers the mean/median of each row/column of the given matrix
 #' around zero.
 #'
-#' @param x a numeric matrix or Matrix object
-#' @param by either "row" or "col". Default is "row"
-#' @param method either "mean" or "median". Default is "mean"
+#' @param x a numeric matrix or Matrix object.
+#' @param by either "row" or "col". Default is "row".
+#' @param method either "mean" or "median". Default is "mean".
+#' @param scale logical indicating whether to scale the rows/columns of x, i.e.
+#' divide each row/column by the standard deviation of the row/column. Default
+#' is FALSE.
 #'
 #' @return A matrix with either mean or median of row/column centered around zero.
 #'
 #' @examples
 #' # Center the mean of each row around zero
 #' m <- matrix(runif(25, 0, 100), nrow = 5, ncol = 5) # Generate a 5x5 numeric matrix
-#' m <- center_matrix(m, by = "row", method = "mean") # Center
+#' m <- center_matrix(m, by = "row", method = "mean", scale = FALSE) # Center
 #' all(rowMeans(m) == 0) # TRUE
 #' all(colMeans(m) == 0) # FALSE
 #'
 #' # Center the median of each column around zero
 #' m <- matrix(runif(25, 0, 100), nrow = 5, ncol = 5) # Generate a 5x5 numeric matrix
-#' m <- center_matrix(m, by = "col", method = "median") # Center
+#' m <- center_matrix(m, by = "col", method = "median", scale = FALSE) # Center
 #' all(rowMedians(m) == 0) # FALSE
 #' all(colMedians(m) == 0) # TRUE
 #'
 #' @author Avishay Spitzer
 #'
 #' @export
-center_matrix <- function(x, by = "row", method = "mean", verbose = FALSE) {
+center_matrix <- function(x, by = "row", method = "mean", scale = FALSE, verbose = FALSE) {
 
-  stopifnot(is_valid_assay(x), by %in% c("row", "col"), method %in% c("mean", "median"))
+  stopifnot(is_valid_assay(x), by %in% c("row", "col"), method %in% c("mean", "median"), is.logical(scale))
 
   center <- .compute(x, by = by, method = method, log_transform_res = FALSE, genes_subset = NULL, verbose = verbose)
 
-  by <- ifelse(by == "row", 1, 2)
+  margin <- ifelse(by == "row", 1, 2)
 
-  x <- base::sweep(x, by, center, check.margin = FALSE)
+  x <- base::sweep(x, MARGIN = margin, STATS = center, FUN = "-", check.margin = FALSE)
+
+  if (isTRUE(scale)) {
+    scale <- .compute(x, by = by, method = "sd", log_transform_res = FALSE, genes_subset = NULL, verbose = verbose)
+
+    x <- sweep(x, MARGIN = margin, STATS = scale, FUN = "/", check.margin=FALSE)
+  }
 
   return (x)
 }
@@ -571,6 +586,7 @@ plot_mean_expression_frequency <- function(object, show_plot = TRUE, save_to_fil
                   housekeeping_cutoff = housekeepingCutoff(preproc_config),
                   log_base = logBase(preproc_config),
                   scaling_factor = scalingFactor(preproc_config),
+                  pseudo_count = pseudoCount(preproc_config),
                   sample_id = nodeID(object), cell_ids = cell_ids,
                   forced_genes_set = forced_genes_set, use_housekeeping_filter = use_housekeeping_filter, verbose = verbose)
 
@@ -578,7 +594,8 @@ plot_mean_expression_frequency <- function(object, show_plot = TRUE, save_to_fil
   object <- object[rownames(x), colnames(x)]
 
   # Coerce to Matrix object to benefit from sparse representation
-  x <- as(x, "Matrix")
+  if(isTRUE(typeMatrix(preproc_config)))
+    x <- as(x, "Matrix")
 
   # Add the new log TPM assay to the object
   logtpm(object) <- x

@@ -15,16 +15,21 @@ NULL # Do not remove me!!!
 #' @description An S4 class for storing preprocessing configuration parameters.
 #'
 #' @slot complexityCutoff A numeric vector of length 2 representing the lower and
-#' upper bounds of complexity (i.e. the number of detected genes per cell)
+#' upper bounds of complexity (i.e. the number of detected genes per cell).
 #' @slot expressionCutoff A numeric representing the minimal log2 mean expression
-#' per gene below which a gene is considered lowly expressed
+#' per gene below which a gene is considered lowly expressed.
 #' @slot housekeepingCutoff A numeric representing the log2 mean expression of
 #' house-keeping genes (i.e. genes that are highly expressed in all cells) per
-#' cell below which a cell is considered low quality
+#' cell below which a cell is considered low quality.
 #' @slot logBase A numeric representing the logarithm base for performing log
-#' transformation on the data
+#' transformation on the data.
 #' @slot scalingFactor A numeric representing a scaling factor by which to divide
-#' each data point before log transformation
+#' each data point before log transformation.
+#' @slot pseudoCount A numeric representing the pseudo count added when performing
+#' log transformation to avoid taking the log of zero.
+#' @slot typeMatrix A logical indicating if the dataset should be represented using
+#' the S4 Matrix class (instead of base R matrix) to reduce memory overhead using
+#' sparse matrix representation.
 #'
 #' @section Methods:
 #' \describe{
@@ -33,10 +38,12 @@ NULL # Do not remove me!!!
 #'   \item{\code{housekeepingCutoff}}{Getter/setter for the housekeeping cutoff}
 #'   \item{\code{logBase}}{Getter/setter for the log base}
 #'   \item{\code{scalingFactor}}{Getter/setter for the scaling factor}
+#'   \item{\code{pseudoCount}}{Getter/setter for the pseudo count}
+#'   \item{\code{typeMatrix}}{Getter/setter for the Matrix type}
 #' }
 #'
 #' @examples
-#' pc <- PreprocConfig(complexityCutoff = c(0, 10000), expressionCutoff = 5, housekeepingCutoff = 7, logBase = 2, scalingFactor = 10)
+#' pc <- PreprocConfig(complexityCutoff = c(0, 10000), expressionCutoff = 5, housekeepingCutoff = 7, logBase = 2, scalingFactor = 10, pseudoCount = 1, typeMatrix = TRUE)
 #'
 #' @aliases PreprocConfig
 #'
@@ -48,7 +55,9 @@ setClass("PreprocConfig",
                    expressionCutoff = "numeric",
                    housekeepingCutoff = "numeric",
                    logBase = "numeric",
-                   scalingFactor = "numeric"))
+                   scalingFactor = "numeric",
+                   pseudoCount = "numeric",
+                   typeMatrix = "logical"))
 
 ### - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 ### Constructors
@@ -58,8 +67,15 @@ setClass("PreprocConfig",
 #' @describeIn PreprocConfig-class Constructs a new \code{PreprocConfig} object.
 #'
 #' @export
-PreprocConfig <- function(complexityCutoff, expressionCutoff, housekeepingCutoff, logBase, scalingFactor) {
-  cp <- new("PreprocConfig", complexityCutoff = complexityCutoff, expressionCutoff = expressionCutoff, housekeepingCutoff = housekeepingCutoff, logBase = logBase, scalingFactor = scalingFactor)
+PreprocConfig <- function(complexityCutoff, expressionCutoff, housekeepingCutoff, logBase, scalingFactor, pseudoCount, typeMatrix) {
+  cp <- new("PreprocConfig",
+            complexityCutoff = complexityCutoff,
+            expressionCutoff = expressionCutoff,
+            housekeepingCutoff = housekeepingCutoff,
+            logBase = logBase,
+            scalingFactor = scalingFactor,
+            pseudoCount = pseudoCount,
+            typeMatrix = typeMatrix)
 
   return (cp)
 }
@@ -70,7 +86,7 @@ PreprocConfig <- function(complexityCutoff, expressionCutoff, housekeepingCutoff
 #'
 #' @export
 NucseqPreprocConfig <- function() {
-  return (PreprocConfig(complexityCutoff = c(2000, 6000), expressionCutoff = 5, housekeepingCutoff = 7, logBase = 2, scalingFactor = 10))
+  return (PreprocConfig(complexityCutoff = c(2000, 6000), expressionCutoff = 5, housekeepingCutoff = 7, logBase = 2, scalingFactor = 10, pseudoCount = 1, typeMatrix = TRUE))
 }
 
 #'
@@ -79,7 +95,7 @@ NucseqPreprocConfig <- function() {
 #'
 #' @export
 SS2PreprocConfig <- function() {
-  return (PreprocConfig(complexityCutoff = c(3000, 8000), expressionCutoff = 4, housekeepingCutoff = 7, logBase = 2, scalingFactor = 10))
+  return (PreprocConfig(complexityCutoff = c(3000, 8000), expressionCutoff = 4, housekeepingCutoff = 7, logBase = 2, scalingFactor = 10, pseudoCount = 1, typeMatrix = TRUE))
 }
 
 #'
@@ -117,6 +133,9 @@ setValidity("PreprocConfig", function(object) {
 
   if (object@scalingFactor <= 0)
     return (sprintf("scaling factor must be greater than 0"))
+
+  if (object@pseudoCount <= 0)
+    return (sprintf("Pseudo count must be greater than 0"))
 
   return(TRUE)
 })
@@ -210,6 +229,40 @@ setReplaceMethod("scalingFactor", "PreprocConfig", function(x, value) {
   return(x)
 })
 
+#'
+#' @rdname PreprocConfig-class
+#'
+#' @export
+setMethod("pseudoCount", "PreprocConfig", function(x) {
+  return(x@pseudoCount)
+})
+
+#'
+#' @rdname PreprocConfig-class
+#'
+#' @export
+setReplaceMethod("pseudoCount", "PreprocConfig", function(x, value) {
+  x@pseudoCount <- value
+  return(x)
+})
+
+#'
+#' @rdname PreprocConfig-class
+#'
+#' @export
+setMethod("typeMatrix", "PreprocConfig", function(x) {
+  return(x@typeMatrix)
+})
+
+#'
+#' @rdname PreprocConfig-class
+#'
+#' @export
+setReplaceMethod("typeMatrix", "PreprocConfig", function(x, value) {
+  x@typeMatrix <- value
+  return(x)
+})
+
 ### - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 ### Display
 ###
@@ -219,8 +272,10 @@ setMethod("show", "PreprocConfig", function(object) {
   cat("Complexity cutoff:", complexityCutoff(object), "\n")
   cat("Expression cutoff:", expressionCutoff(object), "\n")
   cat("Housekeeping cutoff:", housekeepingCutoff(object), "\n")
-  cat("Scaling factor:", scalingFactor(object), "\n")
   cat("Log base:", logBase(object), "\n")
+  cat("Scaling factor:", scalingFactor(object), "\n")
+  cat("Pseudo count:", pseudoCount(object), "\n")
+  cat("Matrix type:", typeMatrix(object), "\n")
 })
 
 is_config_object <- function(object) { return (!is.null(object) & is(object, "PreprocConfig")) }
@@ -268,12 +323,14 @@ setClassUnion("MatrixOrNULL", c("Matrix", "matrix", "NULL"))
 #'   \item{\code{childNodes}}{Getter/setter for childNodes}
 #'   \item{\code{parentNode}}{Getter/setter for the parentNode}
 #'   \item{\code{unprocessedData}}{Getter for the unprocessedData (read-only)}
-#'   \item{\code{preprocConfig}}{Getter/setter for the preprocConfig}
+#'   \item{\code{preprocConfig}}{Getter for the preprocConfig (read-only)}
 #'   \item{\code{nodeID}}{Getter/setter for the nodeID}
 #'   \item{\code{projectID}}{Getter/setter for the projectID}
 #' }
 #'
 #' @examples
+#'
+#'
 #'
 #' @rdname ScandalDataSet
 #'
@@ -297,6 +354,13 @@ setIs("ScandalDataSet", "ScandalDataSetOrNULL")
 ### Constructor
 ###
 
+#  Will be added by Roxygen to the class documentation
+
+#' @usage
+#' ## Constructor
+#' ScandalDataSet(..., childNodes = S4Vectors::SimpleList(),
+#'   parentNode = NULL, preprocConfig = DefaultPreprocConfig(),
+#'   nodeID = NODE_ID(), projectID = PROJ_ID())
 #'
 #' @param ... arguments to pass to the \code{SingleCellExperiment} constructor.
 #' @param childNodes a \code{SimpleList} object containing the child nodes of the
@@ -347,10 +411,15 @@ ScandalDataSet <- function(..., childNodes = S4Vectors::SimpleList(), parentNode
 
 setValidity("ScandalDataSet", function(object) {
 
-  is_child_valid <- sapply(childNodes(object), function(c) is(c, "ScandalDataSet"))
+  message("In setValidity")
 
-  if (!(base::all(ScandalDataSet) == TRUE))
-    return (sprintf("Every child node must be a ScandalDataSet object"))
+  if (length(childNodes(object)) > 0) {
+
+    is_child_valid <- sapply(childNodes(object), function(c) is(c, "ScandalDataSet"))
+
+    if (!(base::all(is_child_valid) == TRUE))
+      return (sprintf("Every child node must be a ScandalDataSet object"))
+  }
 
   return (TRUE)
 })
@@ -368,7 +437,7 @@ setMethod("logtpm", "ScandalDataSet",   function(object, ...) {
 })
 
 #'
-#' @param value a value to replace the currently set value
+#' @param value a value to replace the currently set value (applies to all setter methods).
 #'
 #' @rdname ScandalDataSet
 #'

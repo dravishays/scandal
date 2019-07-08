@@ -5,9 +5,9 @@
 \title{Matrix preprocessing}
 \usage{
 preprocess(x, complexity_cutoff, expression_cutoff, housekeeping_cutoff,
-  log_base, scaling_factor, sample_id = NULL, cell_ids = NULL,
-  forced_genes_set = NULL, use_housekeeping_filter = FALSE,
-  verbose = FALSE)
+  log_base, scaling_factor, pseudo_count, sample_id = NULL,
+  cell_ids = NULL, forced_genes_set = NULL,
+  use_housekeeping_filter = FALSE, verbose = FALSE)
 }
 \arguments{
 \item{x}{a numeric matrix.}
@@ -27,6 +27,9 @@ transformation on the data.}
 
 \item{scaling_factor}{a numeric representing a scaling factor by which to divide
 each data point before log transformation.}
+
+\item{pseudo_count}{a numeric representing the pseudo count added when performing
+log transformation to avoid taking the log of zero.}
 
 \item{sample_id}{an ID of the sample being processed. Used only for printing and hence
 is not a mandatory parameter. Default is NULL.}
@@ -51,7 +54,7 @@ A processed matrix ready for downstream analysis.
 \description{
 Performs preprocessing of a matrix object including breaking
 up the dataset into objects representing the specific samples, filtering out low
-quality cells and lowly expressed genes, log transforming and centering.
+quality cells and lowly expressed genes and log transforming.
 }
 \details{
 This function is performs the matrix preprocessing steps and is used for
@@ -72,8 +75,6 @@ The main steps of preprocessing are as follows:
   than the expression cutoff range configured for the specific sample in
   \code{expression_cutoff}.
   \item Log-transforming the expression data.
-  \item Mean-centering the expression data gene-wise (i.e. subtracting from each row
-  the mean of the row).
 }
 }
 \note{

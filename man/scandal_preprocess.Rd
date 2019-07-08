@@ -26,7 +26,7 @@ A processed ScandalDataSet object ready for analysis.
 \description{
 Performs preprocessing of ScandalDataSet objects including breaking
 up the dataset into objects representing the specific samples, filtering out low
-quality cells and lowly expressed genes, log transforming and centering.
+quality cells and lowly expressed genes and log transforming.
 }
 \details{
 This function is the entry point for preprocessing a \linkS4class{ScandalDataSet}
@@ -49,8 +49,6 @@ The main steps of preprocessing are as follows:
   than the expression cutoff range configured for the specific sample in
   \code{preproc_config_list}.
   \item Log-transforming the expression data.
-  \item Mean-centering the expression data gene-wise (i.e. subtracting from each row
-  the mean of the row).
   \item The \linkS4class{ScandalDataSet} object is added to the \code{childNodes} slot
   of underlying \code{object}
   \item The underlying \code{object} is preprocessed in the same way described above
