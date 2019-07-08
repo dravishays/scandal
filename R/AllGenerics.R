@@ -29,13 +29,16 @@ setGeneric("nodeID", function(object, ...) standardGeneric("nodeID"))
 setGeneric("projectID", function(object, ...) standardGeneric("projectID"))
 
 #' @export
-setGeneric("sampleNames", function(object, ..., return_sorted = FALSE) standardGeneric("sampleNames"))
+setGeneric("nodeIDs", function(object, ..., return_sorted = FALSE) standardGeneric("nodeIDs"))
 
 #' @export
 setGeneric("unprocessedData", function(object, ...) standardGeneric("unprocessedData"))
 
 #' @export
 setGeneric("preprocConfig", function(object, ...) standardGeneric("preprocConfig"))
+
+#' @export
+setGeneric("inspectNode", function(object, nodeID, ...) standardGeneric("inspectSample"))
 
 ### =========================================================================
 ### Genercis for class ConfigParam

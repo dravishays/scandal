@@ -286,6 +286,44 @@ is_config_object <- function(object) { return (!is.null(object) & is(object, "Pr
 ###
 
 ### =========================================================================
+### QCResults objects (start)
+### -------------------------------------------------------------------------
+###
+
+#'
+#' @title QCResults class
+#'
+#' @description An S4 class for storing quality control results.
+#'
+#' @slot cellIDs A vector.
+#' @slot geneSymbols A vector.
+#' @slot statsQC A DataFrame.
+#'
+#' @section Methods:
+#' \describe{
+#'   \item{\code{cellIDs}}{Getter for the cell IDs that passed QC.}
+#'   \item{\code{geneSymbols}}{Getter for the gene symbols that passed QC}
+#'   \item{\code{statsQC}}{Getter for the quality control statistics}
+#' }
+#'
+#' @examples
+#'
+#' @aliases QCResults
+#'
+#' @author Avishay Spitzer
+#'
+#' @export
+setClass("QCResults",
+         slots = c(cellIDs = "vector",
+                   geneSymbols = "vector",
+                   statsQC = "DataFrame"))
+
+### -------------------------------------------------------------------------
+### QCResults objects (end)
+### =========================================================================
+###
+
+### =========================================================================
 ### ScandalDataSet objects (start)
 ### -------------------------------------------------------------------------
 ###
@@ -300,10 +338,6 @@ setClassUnion("MatrixOrNULL", c("Matrix", "matrix", "NULL"))
 #'
 #' @details The S4 class \code{ScandalDataSet}
 #'
-#' @slot childNodes a \code{SimpleList} object containing the child nodes of the
-#' constructed \code{ScandalDataSet} object.
-#' @slot parentNode the parent node of the constructed \code{ScandalDataSet}
-#' object.
 #' @slot unprocessedData a read-only matrix that contains the unprocessed data that
 #' allows re-accessing this data without the need to read it from file. Sparse matrix
 #' representation as well as maintaining a single copy for the entire objects tree
@@ -320,12 +354,14 @@ setClassUnion("MatrixOrNULL", c("Matrix", "matrix", "NULL"))
 #' @section Methods:
 #' \describe{
 #'   \item{\code{logtpm}}{Getter/setter for the logtpm assay}
-#'   \item{\code{childNodes}}{Getter/setter for childNodes}
-#'   \item{\code{parentNode}}{Getter/setter for the parentNode}
 #'   \item{\code{unprocessedData}}{Getter for the unprocessedData (read-only)}
 #'   \item{\code{preprocConfig}}{Getter for the preprocConfig (read-only)}
 #'   \item{\code{nodeID}}{Getter/setter for the nodeID}
 #'   \item{\code{projectID}}{Getter/setter for the projectID}
+#'   \item{\code{nodeIDs}}{Returns a character vector containing the IDs of all
+#'   nodes (samples) in the dataset.}
+#'   \item{\code{inspectNode}}{Returns a ScandalDataSet object representing a
+#'   specific node (sample).}
 #' }
 #'
 #' @examples
@@ -339,9 +375,7 @@ setClassUnion("MatrixOrNULL", c("Matrix", "matrix", "NULL"))
 #' @export
 #' @exportClass ScandalDataSet
 setClass("ScandalDataSet",
-         slots = c(childNodes = "SimpleList",
-                   parentNode = "ScandalDataSetOrNULL",
-                   unprocessedData = "MatrixOrNULL",
+         slots = c(unprocessedData = "MatrixOrNULL",
                    preprocConfig = "PreprocConfig",
                    nodeID = "character",
                    projectID = "character"),
@@ -358,16 +392,10 @@ setIs("ScandalDataSet", "ScandalDataSetOrNULL")
 
 #' @usage
 #' ## Constructor
-#' ScandalDataSet(..., childNodes = S4Vectors::SimpleList(),
-#'   parentNode = NULL, preprocConfig = DefaultPreprocConfig(),
+#' ScandalDataSet(..., preprocConfig = DefaultPreprocConfig(),
 #'   nodeID = NODE_ID(), projectID = PROJ_ID())
 #'
 #' @param ... arguments to pass to the \code{SingleCellExperiment} constructor.
-#' @param childNodes a \code{SimpleList} object containing the child nodes of the
-#' constructed \code{ScandalDataSet} object. Default is an empty \code{SimpleList}
-#' @param parentNode the parent node of the constructed \code{ScandalDataSet}
-#' object. Default is \code{NULL}, meaning that the constructed object has no
-#' parent.
 #' @param preprocConfig a configuration object of class \code{PreprocConfig}
 #' @param nodeID a unique identifier of the constructed \code{ScandalDataSet}
 #' object that should represent the specific sample. If not supplied a unique ID
@@ -377,7 +405,7 @@ setIs("ScandalDataSet", "ScandalDataSetOrNULL")
 #' will be generated randomly however it is advised to set this field.
 #'
 #' @export
-ScandalDataSet <- function(..., childNodes = S4Vectors::SimpleList(), parentNode = NULL, preprocConfig = DefaultPreprocConfig(), nodeID = NODE_ID(), projectID = PROJ_ID()) {
+ScandalDataSet <- function(..., preprocConfig = DefaultPreprocConfig(), nodeID = NODE_ID(), projectID = PROJ_ID()) {
 
   sce <- SingleCellExperiment::SingleCellExperiment(...)
 
@@ -385,15 +413,8 @@ ScandalDataSet <- function(..., childNodes = S4Vectors::SimpleList(), parentNode
     sce <- as(sce, "SingleCellExperiment")
   }
 
-  if (is.null(parentNode))
-    unprocessedData <- assay(sce)
-  else
-    unprocessedData <- NULL
-
   object <- new("ScandalDataSet", sce,
-                childNodes = childNodes,
-                parentNode = parentNode,
-                unprocessedData = unprocessedData,
+                unprocessedData = assay(sce),
                 preprocConfig = preprocConfig,
                 nodeID = nodeID,
                 projectID = projectID)
@@ -410,16 +431,6 @@ ScandalDataSet <- function(..., childNodes = S4Vectors::SimpleList(), parentNode
 ###
 
 setValidity("ScandalDataSet", function(object) {
-
-  message("In setValidity")
-
-  if (length(childNodes(object)) > 0) {
-
-    is_child_valid <- sapply(childNodes(object), function(c) is(c, "ScandalDataSet"))
-
-    if (!(base::all(is_child_valid) == TRUE))
-      return (sprintf("Every child node must be a ScandalDataSet object"))
-  }
 
   return (TRUE)
 })
@@ -451,40 +462,6 @@ setReplaceMethod("logtpm", c("ScandalDataSet", "ANY"),   function(object, ..., v
 #' @rdname ScandalDataSet
 #'
 #' @export
-setMethod("childNodes", "ScandalDataSet", function(object) {
-  return(object@childNodes)
-})
-
-#'
-#' @rdname ScandalDataSet
-#'
-#' @export
-setReplaceMethod("childNodes", "ScandalDataSet", function(object, value) {
-  object@childNodes <- value
-  return(object)
-})
-
-#'
-#' @rdname ScandalDataSet
-#'
-#' @export
-setMethod("parentNode", "ScandalDataSet", function(object) {
-  return(object@parentNode)
-})
-
-#'
-#' @rdname ScandalDataSet
-#'
-#' @export
-setReplaceMethod("parentNode", "ScandalDataSet", function(object, value) {
-  object@parentNode <- value
-  return(object)
-})
-
-#'
-#' @rdname ScandalDataSet
-#'
-#' @export
 setMethod("nodeID", "ScandalDataSet", function(object) {
   return(object@nodeID)
 })
@@ -501,7 +478,7 @@ setMethod("projectID", "ScandalDataSet", function(object) {
 #' @rdname ScandalDataSet
 #'
 #' @export
-setMethod("sampleNames", "ScandalDataSet", function(object) {
+setMethod("nodeIDs", "ScandalDataSet", function(object) {
   return(unique(gsub("*-.*", "", colnames(object))))
 })
 
@@ -510,15 +487,7 @@ setMethod("sampleNames", "ScandalDataSet", function(object) {
 #'
 #' @export
 setMethod("unprocessedData", "ScandalDataSet", function(object) {
-
-  o <- object
-  while(!is.null(parentNode(o)))
-    o <- parentNode(o)
-
-  sname <- base::unique(.cell2tumor(colnames(object)))
-
-  # return only the cells that belong to this specific tumor
-  return (o@unprocessedData[, .subset_cells(colnames(o@unprocessedData), sname), drop = FALSE])
+  return (o@unprocessedData)
 })
 
 #'
@@ -535,6 +504,14 @@ setMethod("preprocConfig", "ScandalDataSet", function(object) {
 #  return(x)
 #})
 
+#'
+#' @rdname ScandalDataSet
+#'
+#' @export
+setMethod("inspectNode", "ScandalDataSet", function(object, nodeID) {
+  return(object@preprocConfig)
+})
+
 ### - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 ### Display
 ###
@@ -549,8 +526,7 @@ scat <- function(fmt, vals=character(), exdent=2, ...) {
 #' @export
 setMethod("show", "ScandalDataSet", function(object) {
   callNextMethod()
-  scat("childNodes(%d): %s\n", names(childNodes(object)))
-  cat("parentNode:", ifelse(is.null(parentNode(object)), "None", nodeID(parentNode(object))), "\n")
+  scat("nodeIDs(%d): %s\n", nodeIDs(object))
   cat("nodeID:", nodeID(object), "\n")
   cat("projectID:", projectID(object), "\n")
   cat("unprocessedData:", class(unprocessedData(object)), "with", NROW(unprocessedData(object)), "rows and", NCOL(unprocessedData(object)), "columns\n")
