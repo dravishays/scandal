@@ -120,7 +120,7 @@ generate_whiskers_plot <- function(data, labels, title = NULL, xlab = NULL, ylab
     ggplot2::stat_summary(fun.y = mean, colour = "black", geom = "text", show.legend = FALSE, vjust = -0.7, aes(label = round(..y.., digits = 1))) +
     ggplot2::scale_fill_hue(name = name) +
     ggplot2::labs(x = xlab, y = ylab) +
-    ggplot2::theme_minimal()
+    ggplot2::theme_classic()
 
   if (!is.null(palette)) {
     if (!(palette %in% rownames(RColorBrewer::brewer.pal.info))) {
@@ -136,9 +136,11 @@ generate_whiskers_plot <- function(data, labels, title = NULL, xlab = NULL, ylab
     p <- p + ggplot2::scale_fill_brewer(name = name, palette = palette)
   }
 
-  p <- p +
-    ggplot2::ggtitle(title) +
-    ggplot2::theme(plot.title = ggplot2::element_text(hjust = 0.5, size = 22), axis.text.x = ggplot2::element_blank())
+  if (!is.null(title)) {
+    p <- p +
+      ggplot2::labs(title = title) +
+      ggplot2::theme(plot.title = ggplot2::element_text(hjust = 0.5, size = 22), axis.text.x = ggplot2::element_blank(), axis.ticks.x = element_blank())
+  }
 
   return (p)
 }

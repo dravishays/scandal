@@ -295,14 +295,17 @@ is_config_object <- function(object) { return (!is.null(object) & is(object, "Pr
 #'
 #' @description An S4 class for storing quality control results.
 #'
+#' @slot preprocConfig A object of class \code{PreprocConfig}.
 #' @slot cellIDs A vector.
-#' @slot geneSymbols A vector.
+#' @slot geneIDs A vector.
 #' @slot statsQC A DataFrame.
 #'
 #' @section Methods:
 #' \describe{
+#'   \item{\code{preprocConfig}}{Getter for the PreprocConfig used when creating
+#'   the quality control result.}
 #'   \item{\code{cellIDs}}{Getter for the cell IDs that passed QC.}
-#'   \item{\code{geneSymbols}}{Getter for the gene symbols that passed QC}
+#'   \item{\code{geneIDs}}{Getter for the gene IDs that passed QC}
 #'   \item{\code{statsQC}}{Getter for the quality control statistics}
 #' }
 #'
@@ -314,9 +317,104 @@ is_config_object <- function(object) { return (!is.null(object) & is(object, "Pr
 #'
 #' @export
 setClass("QCResults",
-         slots = c(cellIDs = "vector",
-                   geneSymbols = "vector",
+         slots = c(preprocConfig = "PreprocConfig",
+                   cellIDs = "vector",
+                   geneIDs = "vector",
                    statsQC = "DataFrame"))
+
+### - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+### Constructors
+###
+
+#'
+#' @describeIn QCResults-class Constructs a new \code{QCResults} object.
+#'
+#' @export
+QCResults <- function(preprocConfig, cellIDs = c(), geneIDs = c(), statsQC = S4Vectors::DataFrame()) {
+  qc <- new("QCResults",
+            preprocConfig = preprocConfig,
+            cellIDs = cellIDs,
+            geneIDs = geneIDs,
+            statsQC = statsQC)
+
+  return (qc)
+}
+
+### - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+### Getters and setters.
+###
+
+#'
+#' @rdname QCResults-class
+#'
+#' @export
+setMethod("preprocConfig", "QCResults", function(object) {
+  return(object@preprocConfig)
+})
+
+#'
+#' @rdname QCResults-class
+#'
+#' @export
+setMethod("cellIDs", "QCResults", function(object) {
+  return(object@cellIDs)
+})
+
+#'
+#' @rdname QCResults-class
+#'
+#' @export
+setReplaceMethod("cellIDs", "QCResults", function(object, value) {
+  object@cellIDs <- value
+  return(object)
+})
+
+#'
+#' @rdname QCResults-class
+#'
+#' @export
+setMethod("geneIDs", "QCResults", function(object) {
+  return(object@geneIDs)
+})
+
+#'
+#' @rdname QCResults-class
+#'
+#' @export
+setReplaceMethod("geneIDs", "QCResults", function(object, value) {
+  object@geneIDs <- value
+  return(object)
+})
+
+#'
+#' @rdname QCResults-class
+#'
+#' @export
+setMethod("statsQC", "QCResults", function(object) {
+  return(object@statsQC)
+})
+
+#'
+#' @rdname QCResults-class
+#'
+#' @export
+setReplaceMethod("statsQC", "QCResults", function(object, value) {
+  object@statsQC <- value
+  return(object)
+})
+
+### - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+### Display
+###
+
+#' @export
+setMethod("show", "QCResults", function(object) {
+  cat("cellIDs:", length(cellIDs(object)), "IDs\n")
+  cat("geneIDs:", length(geneIDs(object)), "IDs\n")
+  show(statsQC(object))
+})
+
+is_qc_results_object <- function(object) { return (!is.null(object) & is(object, "QCResults")) }
 
 ### -------------------------------------------------------------------------
 ### QCResults objects (end)
@@ -343,6 +441,10 @@ setClassUnion("MatrixOrNULL", c("Matrix", "matrix", "NULL"))
 #' representation as well as maintaining a single copy for the entire objects tree
 #' decreases the memory overhead of this approach.
 #' @slot preprocConfig a configuration object of class \code{PreprocConfig}.
+#' @slot qualityControl a \code{SimpleList} object containing objects of class
+#' \code{QCResults} representing the quality control results, i.e. the cells and
+#' genes in each individual node that passed qaulity control and are available for
+#' downstream analysis.
 #' @slot nodeID a unique character identifier of the constructed \code{ScandalDataSet}
 #' object that should represent the specific sample.
 #' @slot projectID a character identifier common to all the nodes in the constructed
@@ -356,6 +458,7 @@ setClassUnion("MatrixOrNULL", c("Matrix", "matrix", "NULL"))
 #'   \item{\code{logtpm}}{Getter/setter for the logtpm assay}
 #'   \item{\code{unprocessedData}}{Getter for the unprocessedData (read-only)}
 #'   \item{\code{preprocConfig}}{Getter for the preprocConfig (read-only)}
+#'   \item{\code{qualityControl}}{Getter/Setter for the qualityControl list}
 #'   \item{\code{nodeID}}{Getter/setter for the nodeID}
 #'   \item{\code{projectID}}{Getter/setter for the projectID}
 #'   \item{\code{nodeIDs}}{Returns a character vector containing the IDs of all
@@ -377,6 +480,7 @@ setClassUnion("MatrixOrNULL", c("Matrix", "matrix", "NULL"))
 setClass("ScandalDataSet",
          slots = c(unprocessedData = "MatrixOrNULL",
                    preprocConfig = "PreprocConfig",
+                   qualityControl = "SimpleList",
                    nodeID = "character",
                    projectID = "character"),
          contains = "SingleCellExperiment"
@@ -416,6 +520,7 @@ ScandalDataSet <- function(..., preprocConfig = DefaultPreprocConfig(), nodeID =
   object <- new("ScandalDataSet", sce,
                 unprocessedData = assay(sce),
                 preprocConfig = preprocConfig,
+                qualityControl = S4Vectors::SimpleList(),
                 nodeID = nodeID,
                 projectID = projectID)
 
@@ -431,6 +536,14 @@ ScandalDataSet <- function(..., preprocConfig = DefaultPreprocConfig(), nodeID =
 ###
 
 setValidity("ScandalDataSet", function(object) {
+
+  if (length(qualityControl(object)) > 0) {
+
+    is_qc_valid <- sapply(qualityControl(object), function(c) is(c, "QCResults"))
+
+    if (!(base::all(is_qc_valid) == TRUE))
+      return (sprintf("Every QC node must be a QCResults object"))
+  }
 
   return (TRUE)
 })
@@ -462,6 +575,23 @@ setReplaceMethod("logtpm", c("ScandalDataSet", "ANY"),   function(object, ..., v
 #' @rdname ScandalDataSet
 #'
 #' @export
+setMethod("qualityControl", "ScandalDataSet", function(object) {
+  return(object@qualityControl)
+})
+
+#'
+#' @rdname ScandalDataSet
+#'
+#' @export
+setReplaceMethod("qualityControl", "ScandalDataSet", function(object, value) {
+  object@qualityControl <- value
+  return(object)
+})
+
+#'
+#' @rdname ScandalDataSet
+#'
+#' @export
 setMethod("nodeID", "ScandalDataSet", function(object) {
   return(object@nodeID)
 })
@@ -487,7 +617,7 @@ setMethod("nodeIDs", "ScandalDataSet", function(object) {
 #'
 #' @export
 setMethod("unprocessedData", "ScandalDataSet", function(object) {
-  return (o@unprocessedData)
+  return (object@unprocessedData)
 })
 
 #'
@@ -509,7 +639,22 @@ setMethod("preprocConfig", "ScandalDataSet", function(object) {
 #'
 #' @export
 setMethod("inspectNode", "ScandalDataSet", function(object, nodeID) {
-  return(object@preprocConfig)
+
+  stopifnot(!is.null(nodeID), is.character(nodeID), nodeID %in% nodeIDs(object))
+
+  qc <- qualityControl(object)[[nodeID]]
+
+  stopifnot(!is.null(qc))
+
+  res <- object[geneIDs(qc), cellIDs(qc)]
+  reducedDims(res) <- S4Vectors::SimpleList()
+  res@nodeID <- nodeID
+  res@preprocConfig <- preprocConfig(qc)
+  res@qualityControl <- S4Vectors::SimpleList(qc)
+  names(res@qualityControl) <- nodeID
+  res@unprocessedData <- res@unprocessedData[, .subset_cells(colnames(res@unprocessedData), nodeID)]
+
+  return(res)
 })
 
 ### - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -529,7 +674,9 @@ setMethod("show", "ScandalDataSet", function(object) {
   scat("nodeIDs(%d): %s\n", nodeIDs(object))
   cat("nodeID:", nodeID(object), "\n")
   cat("projectID:", projectID(object), "\n")
+  scat("qualityControl(%d): %s\n", names(qualityControl(object)))
   cat("unprocessedData:", class(unprocessedData(object)), "with", NROW(unprocessedData(object)), "rows and", NCOL(unprocessedData(object)), "columns\n")
+  show(preprocConfig(object))
 })
 
 is_scandal_object <- function(object) { return (is.null(object) | !is(object, "ScandalDataSet")) }

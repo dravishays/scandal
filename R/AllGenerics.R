@@ -11,16 +11,10 @@ setGeneric("logtpm", function(object, ...) standardGeneric("logtpm"))
 setGeneric("logtpm<-", function(object, ..., value) standardGeneric("logtpm<-"))
 
 #' @export
-setGeneric("childNodes", function(object, ...) standardGeneric("childNodes"))
+setGeneric("qualityControl", function(object, ...) standardGeneric("qualityControl"))
 
 #' @export
-setGeneric("childNodes<-", function(object, ..., value) standardGeneric("childNodes<-"))
-
-#' @export
-setGeneric("parentNode", function(object, ...) standardGeneric("parentNode"))
-
-#' @export
-setGeneric("parentNode<-", function(object, ..., value) standardGeneric("parentNode<-"))
+setGeneric("qualityControl<-", function(object, ..., value) standardGeneric("qualityControl<-"))
 
 #' @export
 setGeneric("nodeID", function(object, ...) standardGeneric("nodeID"))
@@ -38,7 +32,7 @@ setGeneric("unprocessedData", function(object, ...) standardGeneric("unprocessed
 setGeneric("preprocConfig", function(object, ...) standardGeneric("preprocConfig"))
 
 #' @export
-setGeneric("inspectNode", function(object, nodeID, ...) standardGeneric("inspectSample"))
+setGeneric("inspectNode", function(object, nodeID, ...) standardGeneric("inspectNode"))
 
 ### =========================================================================
 ### Genercis for class ConfigParam
@@ -86,3 +80,26 @@ setGeneric("typeMatrix", function(x, ...) standardGeneric("typeMatrix"))
 
 #' @export
 setGeneric("typeMatrix<-", function(x, ..., value) standardGeneric("typeMatrix<-"))
+
+### =========================================================================
+### Genercis for class QCResults
+### -------------------------------------------------------------------------
+###
+
+#' @export
+setGeneric("cellIDs", function(object, ...) standardGeneric("cellIDs"))
+
+#' @export
+setGeneric("cellIDs<-", function(object, ..., value) standardGeneric("cellIDs<-"))
+
+#' @export
+setGeneric("geneIDs", function(object, ...) standardGeneric("geneIDs"))
+
+#' @export
+setGeneric("geneIDs<-", function(object, ..., value) standardGeneric("geneIDs<-"))
+
+#' @export
+setGeneric("statsQC", function(object, ...) standardGeneric("statsQC"))
+
+#' @export
+setGeneric("statsQC<-", function(object, ..., value) standardGeneric("statsQC<-"))

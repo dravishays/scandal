@@ -26,3 +26,6 @@ single-cell sequencing data and is oriented for analyzing cancer-related data.
 }
 }
 
+\author{
+Avishay Spitzer
+}

@@ -23,6 +23,11 @@ Computes the complexity, i.e. the number of genes with count
 greater than zero for each cell (column).
 }
 \examples{
+m <- matrix(c(10, 0, 2, 3, 0, 0, 1, 15, 3), nrow = 3, ncol = 3)
+
+c <- compute_complexity(m) # 2, 1, 3
+
+c <- compute_complexity(m, cell_subset = c(1, 3)) # 2, 3
 
 }
 \author{

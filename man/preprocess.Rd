@@ -6,7 +6,7 @@
 \usage{
 preprocess(x, complexity_cutoff, expression_cutoff, housekeeping_cutoff,
   log_base, scaling_factor, pseudo_count, sample_id = NULL,
-  cell_ids = NULL, forced_genes_set = NULL,
+  cell_ids = NULL, gene_ids = NULL, forced_genes_set = NULL,
   use_housekeeping_filter = FALSE, verbose = FALSE)
 }
 \arguments{
@@ -36,6 +36,9 @@ is not a mandatory parameter. Default is NULL.}
 
 \item{cell_ids}{a charactyer vector containing IDs of cells that already passed QC.
 enables bypassing the low-quality cells filtering step.}
+
+\item{gene_ids}{a charactyer vector containing IDs of genes that already passed QC.
+enables bypassing the lowly-expressed genes filtering step.}
 
 \item{forced_genes_set}{a vector of genes that should be included in the final
 processed object even if their expression is low with the exception of forced

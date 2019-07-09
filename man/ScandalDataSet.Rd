@@ -6,53 +6,42 @@
 \alias{ScandalDataSet}
 \alias{logtpm,ScandalDataSet-method}
 \alias{logtpm<-,ScandalDataSet-method}
-\alias{childNodes,ScandalDataSet-method}
-\alias{childNodes<-,ScandalDataSet-method}
-\alias{parentNode,ScandalDataSet-method}
-\alias{parentNode<-,ScandalDataSet-method}
+\alias{qualityControl,ScandalDataSet-method}
+\alias{qualityControl<-,ScandalDataSet-method}
 \alias{nodeID,ScandalDataSet-method}
 \alias{projectID,ScandalDataSet-method}
-\alias{sampleNames,ScandalDataSet-method}
+\alias{nodeIDs,ScandalDataSet-method}
 \alias{unprocessedData,ScandalDataSet-method}
 \alias{preprocConfig,ScandalDataSet-method}
+\alias{inspectNode,ScandalDataSet-method}
 \title{ScandalDataSet class}
 \usage{
 ## Constructor
-ScandalDataSet(..., childNodes = S4Vectors::SimpleList(),
-  parentNode = NULL, preprocConfig = DefaultPreprocConfig(),
+ScandalDataSet(..., preprocConfig = DefaultPreprocConfig(),
   nodeID = NODE_ID(), projectID = PROJ_ID())
 
 \S4method{logtpm}{ScandalDataSet}(object, ...)
 
 \S4method{logtpm}{ScandalDataSet}(object, ...) <- value
 
-\S4method{childNodes}{ScandalDataSet}(object)
+\S4method{qualityControl}{ScandalDataSet}(object)
 
-\S4method{childNodes}{ScandalDataSet}(object) <- value
-
-\S4method{parentNode}{ScandalDataSet}(object)
-
-\S4method{parentNode}{ScandalDataSet}(object) <- value
+\S4method{qualityControl}{ScandalDataSet}(object) <- value
 
 \S4method{nodeID}{ScandalDataSet}(object)
 
 \S4method{projectID}{ScandalDataSet}(object)
 
-\S4method{sampleNames}{ScandalDataSet}(object)
+\S4method{nodeIDs}{ScandalDataSet}(object)
 
 \S4method{unprocessedData}{ScandalDataSet}(object)
 
 \S4method{preprocConfig}{ScandalDataSet}(object)
+
+\S4method{inspectNode}{ScandalDataSet}(object, nodeID)
 }
 \arguments{
 \item{...}{arguments to pass to the \code{SingleCellExperiment} constructor.}
-
-\item{childNodes}{a \code{SimpleList} object containing the child nodes of the
-constructed \code{ScandalDataSet} object. Default is an empty \code{SimpleList}}
-
-\item{parentNode}{the parent node of the constructed \code{ScandalDataSet}
-object. Default is \code{NULL}, meaning that the constructed object has no
-parent.}
 
 \item{preprocConfig}{a configuration object of class \code{PreprocConfig}}
 
@@ -75,18 +64,17 @@ The S4 class \code{ScandalDataSet}
 \section{Slots}{
 
 \describe{
-\item{\code{childNodes}}{a \code{SimpleList} object containing the child nodes of the
-constructed \code{ScandalDataSet} object.}
-
-\item{\code{parentNode}}{the parent node of the constructed \code{ScandalDataSet}
-object.}
-
 \item{\code{unprocessedData}}{a read-only matrix that contains the unprocessed data that
 allows re-accessing this data without the need to read it from file. Sparse matrix
 representation as well as maintaining a single copy for the entire objects tree
 decreases the memory overhead of this approach.}
 
 \item{\code{preprocConfig}}{a configuration object of class \code{PreprocConfig}.}
+
+\item{\code{qualityControl}}{a \code{SimpleList} object containing objects of class
+\code{QCResults} representing the quality control results, i.e. the cells and
+genes in each individual node that passed qaulity control and are available for
+downstream analysis.}
 
 \item{\code{nodeID}}{a unique character identifier of the constructed \code{ScandalDataSet}
 object that should represent the specific sample.}
@@ -104,16 +92,21 @@ Constructs a \code{ScandalDataSet} object.
 
 \describe{
   \item{\code{logtpm}}{Getter/setter for the logtpm assay}
-  \item{\code{childNodes}}{Getter/setter for childNodes}
-  \item{\code{parentNode}}{Getter/setter for the parentNode}
   \item{\code{unprocessedData}}{Getter for the unprocessedData (read-only)}
   \item{\code{preprocConfig}}{Getter for the preprocConfig (read-only)}
+  \item{\code{qualityControl}}{Getter/Setter for the qualityControl list}
   \item{\code{nodeID}}{Getter/setter for the nodeID}
   \item{\code{projectID}}{Getter/setter for the projectID}
+  \item{\code{nodeIDs}}{Returns a character vector containing the IDs of all
+  nodes (samples) in the dataset.}
+  \item{\code{inspectNode}}{Returns a ScandalDataSet object representing a
+  specific node (sample).}
 }
 }
 
 \examples{
+
+
 
 }
 \author{

@@ -121,19 +121,10 @@ scandal_preprocess <- function(object, preproc_config_list, forced_genes_set = N
 
   stopifnot(!is.null(preproc_config_list),
             is.list(preproc_config_list),
-            base::setequal(sampleNames(object), names(preproc_config_list)),
+            base::setequal(nodeIDs(object), names(preproc_config_list)),
             base::all(base::lapply(preproc_config_list, function(x) is_config_object(x)) == TRUE))
 
-  project_id <- projectID(object)
-
-  for(sname in sampleNames(object)) {
-    sconf <- preproc_config_list[[sname]]
-    sdata <- ScandalDataSet(assays = list(tpm = tpm(object)[, .subset_cells(colnames(object), sname), drop = FALSE]), parentNode = object, preprocConfig = sconf, nodeID = sname, projectID = project_id)
-
-    childNodes(object)[[sname]] <- .scandal_preprocess(sdata, cell_ids = NULL, forced_genes_set = forced_genes_set, use_housekeeping_filter = use_housekeeping_filter, verbose = verbose)
-  }
-
-  object <- .scandal_preprocess(object, cell_ids = .aggregate_cell_ids(object), forced_genes_set = forced_genes_set, use_housekeeping_filter = use_housekeeping_filter, verbose = verbose)
+  object <- .scandal_preprocess(object, preproc_config_list = preproc_config_list, forced_genes_set = forced_genes_set, use_housekeeping_filter = use_housekeeping_filter, verbose = verbose)
 
   return (object)
 }
@@ -161,6 +152,8 @@ scandal_preprocess <- function(object, preproc_config_list, forced_genes_set = N
 #' log transformation to avoid taking the log of zero.
 #' @param cell_ids a charactyer vector containing IDs of cells that already passed QC.
 #' enables bypassing the low-quality cells filtering step.
+#' @param gene_ids a charactyer vector containing IDs of genes that already passed QC.
+#' enables bypassing the lowly-expressed genes filtering step.
 #' @param forced_genes_set a vector of genes that should be included in the final
 #' processed object even if their expression is low with the exception of forced
 #' genes with absolute count equals to zero which will be filtered out. Default is NULL.
@@ -202,7 +195,7 @@ scandal_preprocess <- function(object, preproc_config_list, forced_genes_set = N
 #'
 #' @export
 preprocess <- function(x, complexity_cutoff, expression_cutoff, housekeeping_cutoff, log_base, scaling_factor, pseudo_count,
-                       sample_id = NULL, cell_ids = NULL, forced_genes_set = NULL, use_housekeeping_filter = FALSE, verbose = FALSE) {
+                       sample_id = NULL, cell_ids = NULL, gene_ids = NULL, forced_genes_set = NULL, use_housekeeping_filter = FALSE, verbose = FALSE) {
 
   stopifnot(is_valid_assay(x),
             (is.vector(complexity_cutoff) & is.numeric(complexity_cutoff)),
@@ -213,6 +206,7 @@ preprocess <- function(x, complexity_cutoff, expression_cutoff, housekeeping_cut
             is.numeric(pseudo_count),
             (is.null(forced_genes_set) | is.vector(forced_genes_set)),
             (is.null(cell_ids) | is.vector(cell_ids)),
+            (is.null(gene_ids) | is.vector(gene_ids)),
             is.logical(use_housekeeping_filter))
 
   if (isTRUE(verbose))
@@ -220,10 +214,11 @@ preprocess <- function(x, complexity_cutoff, expression_cutoff, housekeeping_cut
 
   sparcity_before_qc <- length(which(x == 0)) / (dim(x)[1] * dim(x)[2]) * 100
 
-  if (isTRUE(verbose))
-    message("Detecting high quality cells...")
-
   if (is.null(cell_ids)) {
+
+    if (isTRUE(verbose))
+      message("Detecting high quality cells...")
+
     x <- x[, filter_low_quality_cells(x, complexity_cutoff = complexity_cutoff, verbose = verbose)]
 
     if (isFALSE(use_housekeeping_filter)) {
@@ -247,10 +242,23 @@ preprocess <- function(x, complexity_cutoff, expression_cutoff, housekeeping_cut
     x <- x[, colnames(x) %in% cell_ids]
   }
 
-  if (isTRUE(verbose))
-    message("Detecting highly expressed genes...")
+  if (is.null(gene_ids)) {
 
-  x <- x[filter_lowly_expressed_genes(x, expression_cutoff = expression_cutoff, forced_genes_set = forced_genes_set, verbose = verbose), ]
+    if (isTRUE(verbose))
+      message("Detecting highly expressed genes...")
+
+    x <- x[filter_lowly_expressed_genes(x, expression_cutoff = expression_cutoff, forced_genes_set = forced_genes_set, verbose = verbose), ]
+
+  } else {
+
+    if (isTRUE(verbose))
+      message("Skipping gene filtering as gene IDs list was supplied")
+
+    if (!base::all(gene_ids %in% rownames(x)))
+      warning("Some (or all) of the supplied gene IDs were not found in the dataset")
+
+    x <- x[rownames(x) %in% gene_ids,]
+  }
 
   if (isTRUE(verbose))
     message(paste0("Log transforming matrix, (base - ", log_base, ", scaling factor - ", scaling_factor, ", pseudo count - ", pseudo_count, ")"))
@@ -334,6 +342,11 @@ reverse_log_transform <- function(x, log_base = 2, scaling_factor = 1, pseudo_co
 #' @return A named vector of complexity per cell ID.
 #'
 #' @examples
+#' m <- matrix(c(10, 0, 2, 3, 0, 0, 1, 15, 3), nrow = 3, ncol = 3)
+#'
+#' c <- compute_complexity(m) # 2, 1, 3
+#'
+#' c <- compute_complexity(m, cell_subset = c(1, 3)) # 2, 3
 #'
 #' @author Avishay Spitzer
 #'
@@ -469,6 +482,24 @@ filter_lowly_expressed_genes <- function(x, expression_cutoff, forced_genes_set 
   return (unique(c(names(passQC), names(passQC_forced_genes))))
 }
 
+#'
+#' @title Quality control statistics
+#'
+#' @description This function returns a \code{DataFrame} containing statistics
+#' gathered while performing the preprocessing procedure including cell and gene
+#' drop rates.
+#'
+#' @param object a \code{ScandalDataSet} object
+#'
+#' @export
+scandal_quality_control_stats <- function(object) {
+  stopifnot(!is_scandal_object(object))
+
+  res <- do.call(rbind, lapply(qualityControl(object), function(x) statsQC(x)))
+
+  return(res)
+}
+
 #' @export
 scandal_plot_qc_metrics <- function(object, preproc_config_list, show_plot = TRUE, save_to_file = TRUE) {
 
@@ -476,108 +507,140 @@ scandal_plot_qc_metrics <- function(object, preproc_config_list, show_plot = TRU
 
   stopifnot(!is.null(preproc_config_list),
             is.list(preproc_config_list),
-            base::setequal(sampleNames(object), names(preproc_config_list)),
+            base::setequal(nodeIDs(object), names(preproc_config_list)),
             base::all(base::lapply(preproc_config_list, function(x) is_config_object(x)) == TRUE))
 
   project_id <- projectID(object)
 
-  for(sname in sampleNames(object)) {
-    sconf <- preproc_config_list[[sname]]
-    sdata <- ScandalDataSet(assays = list(tpm = tpm(object)[, .subset_cells(colnames(object), sname), drop = FALSE]), parentNode = object, preprocConfig = sconf, nodeID = sname, projectID = project_id)
+  for(nid in nodeIDs(object)) {
+    nconf <- preproc_config_list[[nid]]
+    ndata <- assay(object)[, .subset_cells(colnames(object), nid), drop = FALSE]
 
-    plot_cell_complexity_distribution(sdata, show_plot = show_plot, save_to_file = save_to_file)
+    plot_cell_complexity_distribution(ndata, complexity_cutoff = complexityCutoff(nconf), node_id = nid, project_id = project_id, show_plot = show_plot, save_to_file = save_to_file)
 
-    plot_mean_housekeeping_expression(sdata, show_plot = show_plot, save_to_file = save_to_file)
+    plot_mean_housekeeping_expression(ndata, housekeeping_cutoff = housekeepingCutoff(nconf), node_id = nid, project_id = project_id, show_plot = show_plot, save_to_file = save_to_file)
 
-    plot_mean_expression_frequency(sdata, show_plot = show_plot, save_to_file = save_to_file)
+    plot_mean_expression_frequency(ndata, expression_cutoff = expressionCutoff(nconf), node_id = nid, project_id = project_id, show_plot = show_plot, save_to_file = save_to_file)
   }
 }
 
 #' @export
-plot_cell_complexity_distribution <- function(object, show_plot = TRUE, save_to_file = TRUE) {
+plot_cell_complexity_distribution <- function(x, complexity_cutoff, node_id, project_id, show_plot = TRUE, save_to_file = TRUE) {
 
-  stopifnot(!is_scandal_object(object), is.logical(show_plot), is.logical(save_to_file))
+  stopifnot(is_valid_assay(x), is.numeric(complexity_cutoff), is.character(node_id), is.character(project_id), is.logical(show_plot), is.logical(save_to_file))
 
-  preproc_config <- preprocConfig(object)
+  complexity <- compute_complexity(x)
 
-  complexity_cutoff <- complexityCutoff(preproc_config)
-
-  complexity <- compute_complexity(assay(object))
-
-  p <- generate_scatter_plot(y_data = complexity, title = paste0(nodeID(object), " - Cell complexity distribution"), xlab = "Cells", ylab = "Complexity", plot_ordered = TRUE)
+  p <- generate_scatter_plot(y_data = complexity, title = paste0(node_id, " - Cell complexity distribution"), xlab = "Cells", ylab = "Complexity", plot_ordered = TRUE)
 
   p <- p +
     ggplot2::geom_hline(yintercept = complexity_cutoff[1], linetype = "dashed", color = "red") +
     ggplot2::geom_hline(yintercept = complexity_cutoff[2], linetype = "dashed", color = "red")
 
-  scandal_plot(p, show_plot = show_plot, project_dir = projectID(object), save_to_file = save_to_file, filename = paste0(nodeID(object), "_complexity.png"), dirname = "QC")
+  scandal_plot(p, show_plot = show_plot, project_dir = project_id, save_to_file = save_to_file, filename = paste0(node_id, "_complexity.png"), dirname = "QC")
 }
 
 #' @export
-plot_mean_housekeeping_expression <- function(object, show_plot = TRUE, save_to_file = TRUE) {
+plot_mean_housekeeping_expression <- function(x, housekeeping_cutoff, node_id, project_id, show_plot = TRUE, save_to_file = TRUE) {
 
-  stopifnot(!is_scandal_object(object), is.logical(show_plot), is.logical(save_to_file))
+  stopifnot(is_valid_assay(x), is.numeric(housekeeping_cutoff), is.character(node_id), is.character(project_id), is.logical(show_plot), is.logical(save_to_file))
 
-  preproc_config <- preprocConfig(object)
+  hk_mean_exp <- .compute(x, by = "col", method = "mean", log_transform_res = TRUE, genes_subset = HOUSEKEEPING_GENES_LIST)
 
-  housekeeping_cutoff <- housekeepingCutoff(preproc_config)
-
-  hk_mean_exp <- .compute(assay(object), by = "col", method = "mean", log_transform_res = TRUE, genes_subset = HOUSEKEEPING_GENES_LIST)
-
-  p <- generate_scatter_plot(y_data = hk_mean_exp, title = paste0(nodeID(object), " - Mean expression of housekeeping genes distribution"), xlab = "Cells", ylab = "Mean expression [log2]", plot_ordered = TRUE)
+  p <- generate_scatter_plot(y_data = hk_mean_exp, title = paste0(node_id, " - Mean expression of housekeeping genes distribution"), xlab = "Cells", ylab = "Mean expression [log2]", plot_ordered = TRUE)
 
   p <- p + ggplot2::geom_hline(yintercept = housekeeping_cutoff, linetype = "dashed", color = "red")
 
-  scandal_plot(p, show_plot = show_plot, save_to_file = save_to_file, project_dir = projectID(object), filename = paste0(nodeID(object), "_mean_hk_expression.png"), dirname = "QC")
+  scandal_plot(p, show_plot = show_plot, save_to_file = save_to_file, project_dir = project_id, filename = paste0(node_id, "_mean_hk_expression.png"), dirname = "QC")
 }
 
 #' @export
-plot_mean_expression_frequency <- function(object, show_plot = TRUE, save_to_file = TRUE) {
+plot_mean_expression_frequency <- function(x, expression_cutoff, node_id, project_id, show_plot = TRUE, save_to_file = TRUE) {
 
-  stopifnot(!is_scandal_object(object), is.logical(show_plot), is.logical(save_to_file))
+  stopifnot(is_valid_assay(x), is.numeric(expression_cutoff), is.character(node_id), is.character(project_id), is.logical(show_plot), is.logical(save_to_file))
 
-  preproc_config <- preprocConfig(object)
+  gene_exp <- .compute(x, by = "row", method = "mean", log_transform_res = TRUE)
 
-  expression_cutoff <- expressionCutoff(preproc_config)
-
-  gene_exp <- .compute(assay(object), by = "row", method = "mean", log_transform_res = TRUE)
-
-  p <- generate_histogram_plot(data = gene_exp, title = paste0(nodeID(object), " - Mean gene expression frequency"), xlab = "Mean expression [log2]", ylab = "Frequency")
+  p <- generate_histogram_plot(data = gene_exp, title = paste0(node_id, " - Mean gene expression frequency"), xlab = "Mean expression [log2]", ylab = "Frequency")
 
   p <- p + ggplot2::geom_vline(xintercept = expression_cutoff, linetype = "dashed", color = "red")
 
-  scandal_plot(p, show_plot = show_plot, save_to_file = save_to_file, project_dir = projectID(object), filename = paste0(nodeID(object), "_mean_gene_expression.png"), dirname = "QC")
+  scandal_plot(p, show_plot = show_plot, save_to_file = save_to_file, project_dir = project_id, filename = paste0(node_id, "_mean_gene_expression.png"), dirname = "QC")
 }
 
-# #' @export
-# plot_mean_complexity <- function(object, show_plot = TRUE, save_to_file = TRUE) {
-#
-#   stopifnot(!is_scandal_object(object), is.logical(show_plot), is.logical(save_to_file))
-#
-#   plot_mean_complexity(esce, save_to_file = TRUE, filename = "complexity_per_tumor_pre_qc.png", title = "Complexity per tumor (pre QC)")
-#
-#   complexity_pre  <- compute_complexity(unprocessedData(object))
-#   complexity_post <- compute_complexity(assay(object))
-#
-#   p1 <- generate_whiskers_plot(data = complexity_pre, title = title, labels = colData(esce)$Tumor, xlab = "Tumor")
-#   p2 <- generate_whiskers_plot(data = complexity_post, title = title, labels = colData(esce)$Tumor, xlab = "Tumor")
-#
-#   plot(p, show_plot = show_plot, save_to_file = save_to_file,
-#        filename = ifelse(is.null(filename), paste0(identifier(esce), "_complexity_per_tumor_whiskers.png"), filename),
-#        dirname = ifelse(is.null(dirname), "QC", dirname))
-# }
+#' @export
+plot_mean_complexity <- function(object, show_plot = TRUE, save_to_file = TRUE) {
+
+  stopifnot(!is_scandal_object(object), is.logical(show_plot), is.logical(save_to_file))
+
+  complexity_pre  <- compute_complexity(unprocessedData(object))
+  complexity_post <- compute_complexity(assay(object))
+
+  p1 <- generate_whiskers_plot(data = complexity_pre, title = paste0(nodeID(object), " - Complexity distribution pre-QC"), labels = .cell2tumor(colnames(unprocessedData(object))), xlab = NULL, ylab = "Complexity")
+  p2 <- generate_whiskers_plot(data = complexity_post, title = paste0(nodeID(object), " - Complexity distribution post-QC"), labels = .cell2tumor(colnames(object)), xlab = NULL, ylab = "Complexity")
+
+  p <- p1 + p2
+
+  scandal_plot(p, show_plot = show_plot, save_to_file = save_to_file, project_dir = projectID(object), filename = paste0(nodeID(object), "_complexity_per_tumor_whiskers.png"), dirname = "QC")
+}
 
 .subset_cells <- function(cell_names, sample_name) cell_names[which(.cell2tumor(cell_names) %in% sample_name)]
 
 .cell2tumor <- function(cell_ids) base::gsub("-.*", "", cell_ids)
 
-.scandal_preprocess <- function(object, cell_ids = NULL, forced_genes_set = NULL, use_housekeeping_filter = FALSE, verbose = FALSE) {
+.sparsity <- function(x) length(which(x == 0)) / (dim(x)[1] * dim(x)[2]) * 100
 
-  # Extract the preprocessing configuration object
-  preproc_config <- preprocConfig(object)
+.qc_stats <- function(x_pre, x_post, nid) {
+
+  cells_pre_qc <- ncol(x_pre)
+  cells_post_qc <- ncol(x_post)
+  genes_pre_qc <- nrow(x_pre)
+  genes_post_qc <- nrow(x_post)
+
+  DataFrame("Cells pre-QC" = cells_pre_qc,
+            "Cells post-QC" = cells_post_qc,
+            #"Cells dropped" = paste0((1 - (cells_post_qc / cells_pre_qc)) * 100, "%%"),
+            "Cells dropped" = sprintf("%.2f%%", (1 - (cells_post_qc / cells_pre_qc)) * 100),
+            "Genes pre-QC" = genes_pre_qc,
+            "Genes post-QC" = genes_post_qc,
+            #"Genes dropped" = paste0((1 - (genes_post_qc / genes_pre_qc)) * 100, "%%"),
+            "Genes dropped" = sprintf("%.2f%%", (1 - (genes_post_qc / genes_pre_qc)) * 100),
+            #"Sparsity pre QC" = paste0(.sparsity(x_pre), "%"),
+            #"Sparsity post QC" = paste0(.sparsity(x_post), "%"),
+            "Sparsity pre QC" = sprintf("%.2f%%",.sparsity(x_pre)),
+            "Sparsity post QC" = sprintf("%.2f%%",.sparsity(x_post)),
+            row.names = nid)
+}
+
+.scandal_preprocess <- function(object, preproc_config_list, forced_genes_set = NULL, use_housekeeping_filter = FALSE, verbose = FALSE) {
+
+  for(nid in nodeIDs(object)) {
+    nconf <- preproc_config_list[[nid]]
+
+    x_pre <- as.matrix(assay(object)[, .subset_cells(colnames(object), nid), drop = FALSE])
+
+    x <- preprocess(x_pre,
+                    complexity_cutoff = complexityCutoff(nconf),
+                    expression_cutoff = expressionCutoff(nconf),
+                    housekeeping_cutoff = housekeepingCutoff(nconf),
+                    log_base = logBase(nconf),
+                    scaling_factor = scalingFactor(nconf),
+                    pseudo_count = pseudoCount(nconf),
+                    sample_id = nid, cell_ids = NULL,
+                    forced_genes_set = forced_genes_set, use_housekeeping_filter = use_housekeeping_filter, verbose = verbose)
+
+    stats_qc <- .qc_stats(x_pre, x, nid)
+
+    qc <- QCResults(nconf, cellIDs = colnames(x), geneIDs = rownames(x), statsQC = stats_qc)
+
+    qualityControl(object)[[nid]] <- qc
+  }
 
   # Coerce to base R matrix
   x <- as.matrix(assay(object))
+
+  # Extract the preprocessing configuration object
+  preproc_config <- preprocConfig(object)
 
   # Call the matrix preprocessing function
   x <- preprocess(x,
@@ -587,8 +650,16 @@ plot_mean_expression_frequency <- function(object, show_plot = TRUE, save_to_fil
                   log_base = logBase(preproc_config),
                   scaling_factor = scalingFactor(preproc_config),
                   pseudo_count = pseudoCount(preproc_config),
-                  sample_id = nodeID(object), cell_ids = cell_ids,
+                  sample_id = nodeID(object),
+                  cell_ids = .aggregate_cell_ids(object),
+                  gene_ids = .aggregate_gene_ids(object),
                   forced_genes_set = forced_genes_set, use_housekeeping_filter = use_housekeeping_filter, verbose = verbose)
+
+  stats_qc <- .qc_stats(as.matrix(assay(object)), x, nodeID(object))
+
+  qc <- QCResults(preproc_config, cellIDs = colnames(x), geneIDs = rownames(x), statsQC = stats_qc)
+
+  qualityControl(object)[[nodeID(object)]] <- qc
 
   # subset the object according to the result of the preprocessing function, basically dropping the low quality cells and lowly expressed genes
   object <- object[rownames(x), colnames(x)]
@@ -608,10 +679,20 @@ plot_mean_expression_frequency <- function(object, show_plot = TRUE, save_to_fil
 
 .aggregate_cell_ids <- function(object) {
 
-  cell_ids <- lapply(childNodes(object), function(x) colnames(x))
+  cell_ids <- lapply(qualityControl(object), function(x) cellIDs(x))
   cell_ids <- base::unname(base::unlist(cell_ids))
+  cell_ids <- base::unique(cell_ids)
 
   return (cell_ids)
+}
+
+.aggregate_gene_ids <- function(object) {
+
+  gene_ids <- lapply(qualityControl(object), function(x) geneIDs(x))
+  gene_ids <- base::unname(base::unlist(gene_ids))
+  gene_ids <- base::unique(gene_ids)
+
+  return (gene_ids)
 }
 
 # Internal function that can run different computations given a method on either rows or columns with the posibility to subset them
