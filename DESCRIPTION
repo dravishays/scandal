@@ -36,6 +36,7 @@ RoxygenNote: 6.1.1
 Collate: 
     'AllGenerics.R'
     'AllClasses.R'
+    'analysis-tools.R'
     'gene_sets.R'
     'plotting.R'
     'preprocess.R'

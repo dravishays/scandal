@@ -569,7 +569,7 @@ plot_mean_expression_frequency <- function(x, expression_cutoff, node_id, projec
 }
 
 #' @export
-plot_mean_complexity <- function(object, show_plot = TRUE, save_to_file = TRUE) {
+scandal_plot_complexity_distribution <- function(object, show_plot = TRUE, save_to_file = TRUE) {
 
   stopifnot(!is_scandal_object(object), is.logical(show_plot), is.logical(save_to_file))
 
@@ -582,6 +582,52 @@ plot_mean_complexity <- function(object, show_plot = TRUE, save_to_file = TRUE) 
   p <- p1 + p2
 
   scandal_plot(p, show_plot = show_plot, save_to_file = save_to_file, project_dir = projectID(object), filename = paste0(nodeID(object), "_complexity_per_tumor_whiskers.png"), dirname = "QC")
+}
+
+#'
+#' @title
+#'
+#' @description
+#'
+#' @param object a \code{ScandalDataSet} object
+#' @param node_id the ID of the node to be inspected
+#'
+#' @details
+#'
+#' @examples
+#'
+#' @author Avishay Spitzer
+#'
+#' @export
+scandal_inspect_node <- function(object, node_id, verbose = FALSE) {
+
+  stopifnot(!is_scandal_object(object))
+  stopifnot(!is.null(node_id), is.character(node_id), length(node_id) == 1)
+
+  if (!(node_id %in% nodeIDs(object)))
+    stop("Node ", node_id, " not found")
+
+  node <- inspectNode(object, nodeID = node_id)
+
+  preproc_config <- preprocConfig(node)
+
+  x <- unprocessedData(node)
+
+  x <- preprocess(as.matrix(x),
+                  complexity_cutoff = complexityCutoff(preproc_config),
+                  expression_cutoff = expressionCutoff(preproc_config),
+                  housekeeping_cutoff = housekeepingCutoff(preproc_config),
+                  log_base = logBase(preproc_config),
+                  scaling_factor = scalingFactor(preproc_config),
+                  pseudo_count = pseudoCount(preproc_config),
+                  sample_id = nodeID(node),
+                  cell_ids = colnames(node),
+                  gene_ids = rownames(node),
+                  forced_genes_set = NULL, use_housekeeping_filter = FALSE, verbose = verbose)
+
+  node <- .assign_assay(node, x)
+
+  return (node)
 }
 
 .subset_cells <- function(cell_names, sample_name) cell_names[which(.cell2tumor(cell_names) %in% sample_name)]
@@ -661,18 +707,8 @@ plot_mean_complexity <- function(object, show_plot = TRUE, save_to_file = TRUE) 
 
   qualityControl(object)[[nodeID(object)]] <- qc
 
-  # subset the object according to the result of the preprocessing function, basically dropping the low quality cells and lowly expressed genes
-  object <- object[rownames(x), colnames(x)]
-
-  # Coerce to Matrix object to benefit from sparse representation
-  if(isTRUE(typeMatrix(preproc_config)))
-    x <- as(x, "Matrix")
-
-  # Add the new log TPM assay to the object
-  logtpm(object) <- x
-
-  # Drop the tpm assay
-  assays(object) <- assays(object)[c("logtpm")]
+  # re-assign the matrix after preprocessing
+  object <- .assign_assay(object, x)
 
   return (object)
 }
@@ -693,6 +729,26 @@ plot_mean_complexity <- function(object, show_plot = TRUE, save_to_file = TRUE) 
   gene_ids <- base::unique(gene_ids)
 
   return (gene_ids)
+}
+
+.assign_assay <- function(object, x) {
+
+  preproc_config <- preprocConfig(object)
+
+  # subset the object according to the result of the preprocessing function, basically dropping the low quality cells and lowly expressed genes
+  object <- object[rownames(x), colnames(x)]
+
+  # Coerce to Matrix object to benefit from sparse representation
+  if(isTRUE(typeMatrix(preproc_config)))
+    x <- as(x, "Matrix")
+
+  # Add the new log TPM assay to the object
+  logtpm(object) <- x
+
+  # Drop the tpm assay
+  assays(object) <- assays(object)[c("logtpm")]
+
+  return (object)
 }
 
 # Internal function that can run different computations given a method on either rows or columns with the posibility to subset them
