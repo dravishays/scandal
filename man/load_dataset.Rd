@@ -23,6 +23,8 @@ should be excluded from the returned dataset. Defaults to NULL.}
 \item{as_Matrix}{logical indicating whether the loaded dataset should be returned
 as an S4 Matrix class (supports sparse representation) or base R matrix type.
 Default is TRUE.}
+
+\item{verbose}{suppresses all messages from this function. Default is FALSE.}
 }
 \value{
 

@@ -19,6 +19,8 @@ genes with absolute count equals to zero which will be filtered out. Default is 
 
 \item{use_housekeeping_filter}{should cells with low expression of house-keeping genes
 be filtered out. Default is FALSE.}
+
+\item{verbose}{suppresses all messages from this function. Default is FALSE.}
 }
 \value{
 A processed ScandalDataSet object ready for analysis.

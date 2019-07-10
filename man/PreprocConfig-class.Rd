@@ -21,6 +21,7 @@
 \alias{pseudoCount<-,PreprocConfig-method}
 \alias{typeMatrix,PreprocConfig-method}
 \alias{typeMatrix<-,PreprocConfig-method}
+\alias{show,PreprocConfig-method}
 \title{PreprocConfig class}
 \usage{
 PreprocConfig(complexityCutoff, expressionCutoff, housekeepingCutoff,
@@ -59,6 +60,36 @@ DefaultPreprocConfig()
 \S4method{typeMatrix}{PreprocConfig}(x)
 
 \S4method{typeMatrix}{PreprocConfig}(x) <- value
+
+\S4method{show}{PreprocConfig}(object)
+}
+\arguments{
+\item{complexityCutoff}{A numeric vector of length 2 representing the lower and
+upper bounds of complexity (i.e. the number of detected genes per cell).}
+
+\item{expressionCutoff}{A numeric representing the minimal log2 mean expression
+per gene below which a gene is considered lowly expressed.}
+
+\item{housekeepingCutoff}{A numeric representing the log2 mean expression of
+house-keeping genes (i.e. genes that are highly expressed in all cells) per
+cell below which a cell is considered low quality.}
+
+\item{logBase}{A numeric representing the logarithm base for performing log
+transformation on the data.}
+
+\item{scalingFactor}{A numeric representing a scaling factor by which to divide
+each data point before log transformation.}
+
+\item{pseudoCount}{A numeric representing the pseudo count added when performing
+log transformation to avoid taking the log of zero.}
+
+\item{typeMatrix}{A logical indicating if the dataset should be represented using
+the S4 Matrix class (instead of base R matrix) to reduce memory overhead using
+sparse matrix representation.}
+
+\item{x}{a \code{PreprocConfig} object.}
+
+\item{value}{a value to replace the currently set value.}
 }
 \description{
 An S4 class for storing preprocessing configuration parameters.
@@ -118,7 +149,17 @@ sparse matrix representation.}
 }
 
 \examples{
-pc <- PreprocConfig(complexityCutoff = c(0, 10000), expressionCutoff = 5, housekeepingCutoff = 7, logBase = 2, scalingFactor = 10, pseudoCount = 1, typeMatrix = TRUE)
+pc <- PreprocConfig(complexityCutoff = c(0, 10000),
+                    expressionCutoff = 5,
+                    housekeepingCutoff = 7,
+                    logBase = 2,
+                    scalingFactor = 10,
+                    pseudoCount = 1,
+                    typeMatrix = TRUE)
+
+logBase(pc) # Equals 2
+logBase(pc) <- 10
+logBase(pc) # Equals 10
 
 }
 \author{

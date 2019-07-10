@@ -2,14 +2,35 @@
 % Please edit documentation in R/plotting.R
 \name{scandal_plot}
 \alias{scandal_plot}
-\title{}
+\title{Plot and save}
 \usage{
 scandal_plot(p, show_plot = TRUE, save_to_file = FALSE,
   project_dir = NULL, plots_dir = "plots", filename = NULL,
   dirname = NULL, device = "png")
 }
 \arguments{
-\item{device}{}
+\item{p}{a \code{ggplot} object.}
+
+\item{show_plot}{whether the plot should be printed to the graphics device.
+Defualt is TRUE.}
+
+\item{save_to_file}{whether the plot should be saved to the disk.
+Default is TRUE.}
+
+\item{project_dir}{the root directory of the current project to which all
+plots are saved. Default is NULL meaning that the plots will be saved to the
+working directory.}
+
+\item{plots_dir}{a subdirectory in \code{project_dir} to which all plots
+are saved. Default is "plots".}
+
+\item{filename}{a name for the file to be saved. If NULL and \code{save_to_file}
+is set to TRUE then an error will be generated.}
+
+\item{dirname}{a name for the subdirectory in \code{plots_dir} to save the file into.
+If NULL and \code{save_to_file} is set to TRUE then an error will be generated.}
+
+\item{device}{a device to use. See \link{ggsave} for details. Default is "png"}
 }
 \value{
 

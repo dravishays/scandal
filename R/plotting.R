@@ -1,16 +1,24 @@
 
 #'
-#' @title
+#' @title Plot and save
 #'
 #' @description
 #'
-#' @param p
-#' @param show_plot
-#' @param save_to_file
-#' @param project_dir
-#' @param filename
-#' @param dirname
-#' @param device
+#' @param p a \code{ggplot} object.
+#' @param show_plot whether the plot should be printed to the graphics device.
+#' Defualt is TRUE.
+#' @param save_to_file whether the plot should be saved to the disk.
+#' Default is TRUE.
+#' @param project_dir the root directory of the current project to which all
+#' plots are saved. Default is NULL meaning that the plots will be saved to the
+#' working directory.
+#' @param plots_dir a subdirectory in \code{project_dir} to which all plots
+#' are saved. Default is "plots".
+#' @param filename a name for the file to be saved. If NULL and \code{save_to_file}
+#' is set to TRUE then an error will be generated.
+#' @param dirname a name for the subdirectory in \code{plots_dir} to save the file into.
+#' If NULL and \code{save_to_file} is set to TRUE then an error will be generated.
+#' @param device a device to use. See \link{ggsave} for details. Default is "png"
 #'
 #' @details
 #'
@@ -21,7 +29,7 @@
 #' @export
 scandal_plot <- function(p, show_plot = TRUE, save_to_file = FALSE, project_dir = NULL, plots_dir = "plots", filename = NULL, dirname = NULL, device = "png") {
 
-  stopifnot(is.ggplot(p), is.logical(show_plot), is.logical(save_to_file))
+  stopifnot(ggplot2::is.ggplot(p), is.logical(show_plot), is.logical(save_to_file))
 
   if (isTRUE(show_plot))
     print(p)
@@ -65,9 +73,9 @@ generate_scatter_plot <- function(y_data, x_data = NULL, title = NULL, labels = 
     df <- data.frame(x = x_data, y = y_data, label = labels)
 
   if (is.null(labels))
-    p <- ggplot2::ggplot(df, aes(x = x, y = y))
+    p <- ggplot2::ggplot(df, ggplot2::aes(x = x, y = y))
   else
-    p <- ggplot2::ggplot(df, aes(x = x, y = y, color = label)) +
+    p <- ggplot2::ggplot(df, ggplot2::aes(x = x, y = y, color = label)) +
       ggplot2::scale_color_hue(name = name)
 
   p <- p + ggplot2::geom_point()
@@ -96,7 +104,7 @@ generate_histogram_plot <- function(data, title, xlab = "Cells", ylab = NULL, by
 
   df <- data.frame(x = seq_len(length(data)), y = data)
 
-  p <- ggplot2::ggplot(df, aes(x = df$y)) +
+  p <- ggplot2::ggplot(df, ggplot2::aes(x = df$y)) +
     ggplot2::geom_histogram(breaks = seq(0, max(df$y), by = by), col = "black", fill = "lightblue", alpha = .2) +
     #geom_histogram(binwidth = nclass.Sturges, col = "black", fill = "lightblue", alpha = .2) +
     ggplot2::ggtitle(title) +
@@ -114,10 +122,10 @@ generate_whiskers_plot <- function(data, labels, title = NULL, xlab = NULL, ylab
 
   df <- data.frame(x = labels, y = data, label = labels)
 
-  p <- ggplot2::ggplot(df, aes(x = x, y = y, fill = label)) +
+  p <- ggplot2::ggplot(df, ggplot2::aes(x = x, y = y, fill = label)) +
     ggplot2::geom_boxplot() +
     ggplot2::stat_summary(fun.y = mean, colour = "black", geom = "point", shape = 18, size = 3, show.legend = FALSE) +
-    ggplot2::stat_summary(fun.y = mean, colour = "black", geom = "text", show.legend = FALSE, vjust = -0.7, aes(label = round(..y.., digits = 1))) +
+    ggplot2::stat_summary(fun.y = mean, colour = "black", geom = "text", show.legend = FALSE, vjust = -0.7, ggplot2::aes(label = round(..y.., digits = 1))) +
     ggplot2::scale_fill_hue(name = name) +
     ggplot2::labs(x = xlab, y = ylab) +
     ggplot2::theme_classic()
@@ -139,7 +147,7 @@ generate_whiskers_plot <- function(data, labels, title = NULL, xlab = NULL, ylab
   if (!is.null(title)) {
     p <- p +
       ggplot2::labs(title = title) +
-      ggplot2::theme(plot.title = ggplot2::element_text(hjust = 0.5, size = 22), axis.text.x = ggplot2::element_blank(), axis.ticks.x = element_blank())
+      ggplot2::theme(plot.title = ggplot2::element_text(hjust = 0.5, size = 22), axis.text.x = ggplot2::element_blank(), axis.ticks.x = ggplot2::element_blank())
   }
 
   return (p)

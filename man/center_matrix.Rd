@@ -17,6 +17,8 @@ center_matrix(x, by = "row", method = "mean", scale = FALSE,
 \item{scale}{logical indicating whether to scale the rows/columns of x, i.e.
 divide each row/column by the standard deviation of the row/column. Default
 is FALSE.}
+
+\item{verbose}{suppresses all messages from this function. Default is FALSE.}
 }
 \value{
 A matrix with either mean or median of row/column centered around zero.
@@ -35,8 +37,8 @@ all(colMeans(m) == 0) # FALSE
 # Center the median of each column around zero
 m <- matrix(runif(25, 0, 100), nrow = 5, ncol = 5) # Generate a 5x5 numeric matrix
 m <- center_matrix(m, by = "col", method = "median", scale = FALSE) # Center
-all(rowMedians(m) == 0) # FALSE
-all(colMedians(m) == 0) # TRUE
+all(apply(m, 1, median) == 0)  # FALSE
+all(apply(m, 2, median) == 0)  # FALSE
 
 }
 \author{

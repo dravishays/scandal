@@ -8,12 +8,14 @@ compute_complexity(x, return_sorted = FALSE, cell_subset = NULL,
   verbose = FALSE)
 }
 \arguments{
-\item{x}{a numeric matrix or Matrix object}
+\item{x}{a numeric matrix or Matrix object.}
 
-\item{return_sorted}{should the result be returned sorted. Default is FALSE}
+\item{return_sorted}{should the result be returned sorted. Default is FALSE.}
 
 \item{cell_subset}{a vector of cell IDs for which the complexity should be
-calculated. Default is NULL}
+calculated. Default is NULL.}
+
+\item{verbose}{suppresses all messages from this function. Default is FALSE.}
 }
 \value{
 A named vector of complexity per cell ID.

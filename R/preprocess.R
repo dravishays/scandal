@@ -15,6 +15,7 @@
 #' @param as_Matrix logical indicating whether the loaded dataset should be returned
 #' as an S4 Matrix class (supports sparse representation) or base R matrix type.
 #' Default is TRUE.
+#' @param verbose suppresses all messages from this function. Default is FALSE.
 #'
 #' @details
 #'
@@ -78,6 +79,7 @@ load_dataset <- function(filename, drop_cols = 1, rownames_col = 1, excluded_sam
 #' genes with absolute count equals to zero which will be filtered out. Default is NULL.
 #' @param use_housekeeping_filter should cells with low expression of house-keeping genes
 #' be filtered out. Default is FALSE.
+#' @param verbose suppresses all messages from this function. Default is FALSE.
 #'
 #' @details This function is the entry point for preprocessing a \linkS4class{ScandalDataSet}
 #' object to allow downstream analysis.
@@ -159,11 +161,9 @@ scandal_preprocess <- function(object, preproc_config_list, forced_genes_set = N
 #' genes with absolute count equals to zero which will be filtered out. Default is NULL.
 #' @param sample_id an ID of the sample being processed. Used only for printing and hence
 #' is not a mandatory parameter. Default is NULL.
-#' @param forced_genes_set a vector of genes that should be included in the final
-#' processed object even if their expression is low with the exception of forced
-#' genes with absolute count equals to zero which will be filtered out. Default is NULL.
 #' @param use_housekeeping_filter should cells with low expression of housekeeping genes
 #' should be filtered out. Default is FALSE.
+#' @param verbose suppresses all messages from this function. Default is FALSE.
 #'
 #' @details This function is performs the matrix preprocessing steps and is used for
 #' preprocessing \linkS4class{ScandalDataSet} objects to allow downstream analysis.
@@ -294,6 +294,7 @@ preprocess <- function(x, complexity_cutoff, expression_cutoff, housekeeping_cut
 #' divided prior to log computation. Default is 1, i.e. no scaling
 #' @param pseudo_count a positive number which will be added to the possibly scaled
 #' x prior to log computation to avoid taking the logarithm of zero. Default is 1
+#' @param verbose suppresses all messages from this function. Default is FALSE.
 #'
 #' @return A log-transformed numeric object.
 #'
@@ -334,10 +335,11 @@ reverse_log_transform <- function(x, log_base = 2, scaling_factor = 1, pseudo_co
 #' @description Computes the complexity, i.e. the number of genes with count
 #' greater than zero for each cell (column).
 #'
-#' @param x a numeric matrix or Matrix object
-#' @param return_sorted should the result be returned sorted. Default is FALSE
+#' @param x a numeric matrix or Matrix object.
+#' @param return_sorted should the result be returned sorted. Default is FALSE.
 #' @param cell_subset a vector of cell IDs for which the complexity should be
-#' calculated. Default is NULL
+#' calculated. Default is NULL.
+#' @param verbose suppresses all messages from this function. Default is FALSE.
 #'
 #' @return A named vector of complexity per cell ID.
 #'
@@ -379,6 +381,7 @@ compute_complexity <- function(x, return_sorted = FALSE, cell_subset = NULL, ver
 #' @param scale logical indicating whether to scale the rows/columns of x, i.e.
 #' divide each row/column by the standard deviation of the row/column. Default
 #' is FALSE.
+#' @param verbose suppresses all messages from this function. Default is FALSE.
 #'
 #' @return A matrix with either mean or median of row/column centered around zero.
 #'
@@ -392,8 +395,8 @@ compute_complexity <- function(x, return_sorted = FALSE, cell_subset = NULL, ver
 #' # Center the median of each column around zero
 #' m <- matrix(runif(25, 0, 100), nrow = 5, ncol = 5) # Generate a 5x5 numeric matrix
 #' m <- center_matrix(m, by = "col", method = "median", scale = FALSE) # Center
-#' all(rowMedians(m) == 0) # FALSE
-#' all(colMedians(m) == 0) # TRUE
+#' all(apply(m, 1, median) == 0)  # FALSE
+#' all(apply(m, 2, median) == 0)  # FALSE
 #'
 #' @author Avishay Spitzer
 #'
@@ -442,7 +445,7 @@ filter_low_housekeeping_cells <- function(x, housekeeping_cutoff, verbose = FALS
 
   stopifnot(is_valid_assay(x), is.numeric(housekeeping_cutoff), housekeeping_cutoff > 0)
 
-  hk_mean_exp <- .compute(x, by = "col", method = "mean", log_transform_res = TRUE, genes_subset = HOUSEKEEPING_GENES_LIST, verbose = verbose)
+  hk_mean_exp <- .compute(x, by = "col", method = "mean", log_transform_res = TRUE, genes_subset = SCANDAL_HOUSEKEEPING_GENES_LIST, verbose = verbose)
 
   passQC <- hk_mean_exp[hk_mean_exp >= housekeeping_cutoff]
 
@@ -568,6 +571,8 @@ plot_mean_expression_frequency <- function(x, expression_cutoff, node_id, projec
   scandal_plot(p, show_plot = show_plot, save_to_file = save_to_file, project_dir = project_id, filename = paste0(node_id, "_mean_gene_expression.png"), dirname = "QC")
 }
 
+#' @import patchwork
+#'
 #' @export
 scandal_plot_complexity_distribution <- function(object, show_plot = TRUE, save_to_file = TRUE) {
 
@@ -579,18 +584,19 @@ scandal_plot_complexity_distribution <- function(object, show_plot = TRUE, save_
   p1 <- generate_whiskers_plot(data = complexity_pre, title = paste0(nodeID(object), " - Complexity distribution pre-QC"), labels = .cell2tumor(colnames(unprocessedData(object))), xlab = NULL, ylab = "Complexity")
   p2 <- generate_whiskers_plot(data = complexity_post, title = paste0(nodeID(object), " - Complexity distribution post-QC"), labels = .cell2tumor(colnames(object)), xlab = NULL, ylab = "Complexity")
 
-  p <- p1 + p2
+  p <- p1 | p2
 
   scandal_plot(p, show_plot = show_plot, save_to_file = save_to_file, project_dir = projectID(object), filename = paste0(nodeID(object), "_complexity_per_tumor_whiskers.png"), dirname = "QC")
 }
 
 #'
-#' @title
+#' @title Node inspection
 #'
 #' @description
 #'
 #' @param object a \code{ScandalDataSet} object
 #' @param node_id the ID of the node to be inspected
+#' @param verbose suppresses all messages from this function. Default is FALSE.
 #'
 #' @details
 #'
@@ -731,6 +737,7 @@ scandal_inspect_node <- function(object, node_id, verbose = FALSE) {
   return (gene_ids)
 }
 
+#' @importFrom methods as
 .assign_assay <- function(object, x) {
 
   preproc_config <- preprocConfig(object)

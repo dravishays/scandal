@@ -12,26 +12,28 @@ Encoding: UTF-8
 LazyData: true
 Suggests: 
     testthat
-Depends: 
-    S4Vectors,
+Imports:
     stats,
-    SingleCellExperiment,
     utils,
     dplyr,
     rlang,
     tidyr,
-    Matrix,
     tibble,
     roxygen2,
-    ggplot2,
     scales,
     reshape2,
-    patchwork,
     Rtsne,
     umap,
-    methods,
     RColorBrewer,
-    grDevices
+    grDevices,
+    S4Vectors,
+    methods,
+    Matrix,
+    ggplot2,
+    patchwork
+Depends:
+    SummarizedExperiment,
+    SingleCellExperiment
 RoxygenNote: 6.1.1
 Collate: 
     'AllGenerics.R'

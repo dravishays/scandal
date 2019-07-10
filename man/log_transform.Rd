@@ -22,6 +22,8 @@ divided prior to log computation. Default is 1, i.e. no scaling}
 
 \item{pseudo_count}{a positive number which will be added to the possibly scaled
 x prior to log computation to avoid taking the logarithm of zero. Default is 1}
+
+\item{verbose}{suppresses all messages from this function. Default is FALSE.}
 }
 \value{
 A log-transformed numeric object.

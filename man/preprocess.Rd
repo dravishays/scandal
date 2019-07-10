@@ -47,9 +47,7 @@ genes with absolute count equals to zero which will be filtered out. Default is 
 \item{use_housekeeping_filter}{should cells with low expression of housekeeping genes
 should be filtered out. Default is FALSE.}
 
-\item{forced_genes_set}{a vector of genes that should be included in the final
-processed object even if their expression is low with the exception of forced
-genes with absolute count equals to zero which will be filtered out. Default is NULL.}
+\item{verbose}{suppresses all messages from this function. Default is FALSE.}
 }
 \value{
 A processed matrix ready for downstream analysis.

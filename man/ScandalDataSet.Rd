@@ -14,6 +14,7 @@
 \alias{unprocessedData,ScandalDataSet-method}
 \alias{preprocConfig,ScandalDataSet-method}
 \alias{inspectNode,ScandalDataSet-method}
+\alias{show,ScandalDataSet-method}
 \title{ScandalDataSet class}
 \usage{
 ## Constructor
@@ -39,11 +40,13 @@ ScandalDataSet(..., preprocConfig = DefaultPreprocConfig(),
 \S4method{preprocConfig}{ScandalDataSet}(object)
 
 \S4method{inspectNode}{ScandalDataSet}(object, nodeID)
+
+\S4method{show}{ScandalDataSet}(object)
 }
 \arguments{
-\item{...}{arguments to pass to the \code{SingleCellExperiment} constructor.}
+\item{...}{arguments to pass to the \linkS4class{SingleCellExperiment} constructor.}
 
-\item{preprocConfig}{a configuration object of class \code{PreprocConfig}}
+\item{preprocConfig}{a configuration object of class \linkS4class{PreprocConfig}}
 
 \item{nodeID}{a unique identifier of the constructed \code{ScandalDataSet}
 object that should represent the specific sample. If not supplied a unique ID
@@ -53,33 +56,46 @@ will be generated randomly however it is advised to set this field.}
 \code{ScandalDataSet} object.  If not supplied a unique ID
 will be generated randomly however it is advised to set this field.}
 
+\item{object}{a \code{ScandalDataSet} object.}
+
 \item{value}{a value to replace the currently set value (applies to all setter methods).}
 }
 \description{
-An S4 class for storing single-cell seqeuncing data, analysis
+An S4 class that stores single-cell seqeuncing data, reduced
+dimensions representations of data reuqired in the analysis process such as
+t-SNE and UMAP coordinates and the end-product of the analysis which are the
+transcriptional programs.
 }
 \details{
-The S4 class \code{ScandalDataSet}
+The S4 class \code{ScandalDataSet} inherits from and extends Bioconductor's
+base class for single-cell related applications, the \linkS4class{SingleCellExperiment}
+class.
+The idea behind \link{scandal} is that in order to detect intra-tumor heterogeneity
+one needs inspect each tumor individually to collect the different transcriptomic
+programs that can be found within each tumor and then assess these programs at the
+level of the entire dataset to define the programs that generalize best.
+Besides the functionality supplied by its superclasses, \code{ScandalDataSet}
+supplies methods to keep
 }
 \section{Slots}{
 
 \describe{
-\item{\code{unprocessedData}}{a read-only matrix that contains the unprocessed data that
+\item{\code{unprocessedData}}{A read-only matrix that contains the unprocessed data that
 allows re-accessing this data without the need to read it from file. Sparse matrix
 representation as well as maintaining a single copy for the entire objects tree
 decreases the memory overhead of this approach.}
 
-\item{\code{preprocConfig}}{a configuration object of class \code{PreprocConfig}.}
+\item{\code{preprocConfig}}{A configuration object of class \linkS4class{PreprocConfig}.}
 
-\item{\code{qualityControl}}{a \code{SimpleList} object containing objects of class
+\item{\code{qualityControl}}{A \linkS4class{SimpleList} object containing objects of class
 \code{QCResults} representing the quality control results, i.e. the cells and
 genes in each individual node that passed qaulity control and are available for
 downstream analysis.}
 
-\item{\code{nodeID}}{a unique character identifier of the constructed \code{ScandalDataSet}
+\item{\code{nodeID}}{A unique character identifier of the constructed \code{ScandalDataSet}
 object that should represent the specific sample.}
 
-\item{\code{projectID}}{a character identifier common to all the nodes in the constructed
+\item{\code{projectID}}{A character identifier common to all the nodes in the constructed
 \code{ScandalDataSet} object.}
 }}
 
@@ -105,9 +121,37 @@ Constructs a \code{ScandalDataSet} object.
 }
 
 \examples{
+# Building a mock dataset with 30 cells and 100 genes
+ngenes <- 100
+ncells <- 30
+dataset <- matrix(sample(0:1e4, ngenes * ncells, replace = FALSE), nrow = ngenes, ncol = ncells)
+rownames(dataset) <- sapply(seq_len(ngenes), function(x) paste0("GENE", x))
+colnames(dataset) <- c(sapply(seq_len(ncells / 2), function(x) paste0("TUMOR1-Cell", x)),
+                       sapply(seq(from = ncells / 2 + 1, to = ncells), function(x) paste0("TUMOR2-Cell", (x - ncells/2))))
 
+# Declare a global confguration object for the top-level ScandalDataSet object and
+a named list of configuration objects for each single tumor. Note that the names
+of the elements in the named list correspond to the names of the tumors that appear
+in the column names
+global_config <- PreprocConfig(complexityCutoff = c(0, 10000), expressionCutoff = 1, housekeepingCutoff = 1, logBase = 2, scalingFactor = 1, pseudoCount = 1, typeMatrix = TRUE)
+tumor_config <- list(TUMOR1 = PreprocConfig(complexityCutoff = c(0, 10000), expressionCutoff = 1, housekeepingCutoff = 1, logBase = 2, scalingFactor = 1, pseudoCount = 1, typeMatrix = TRUE),
+                     TUMOR2 = PreprocConfig(complexityCutoff = c(0, 10000), expressionCutoff = 1, housekeepingCutoff = 1, logBase = 2, scalingFactor = 1, pseudoCount = 1, typeMatrix = TRUE))
 
+# Instantiate a new ScandalDataSet object
+sds <- ScandalDataSet(assays = list(tpm = dataset), preprocConfig = global_config, nodeID = "Example1", projectID = "Project1")
 
+sds # Prints a user-readable summary of sds
+
+all(colnames(sds) == colnames(dataset)) # TRUE
+all(rownames(sds) == rownames(dataset)) # TRUE
+nodeIDs(sds) # Return a vector (TUMOR1, TUMOR2)
+qualityControl(sds) # Empty list
+nodeID(sds) # Returns "Example1"
+projectID(sds) # Returns "Project1"
+
+}
+\seealso{
+\linkS4class{SummarizedExperiment}, \linkS4class{SingleCellExperiment}, \link{scandal_preprocess}
 }
 \author{
 Avishay Spitzer

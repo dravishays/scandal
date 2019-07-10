@@ -43,7 +43,17 @@ NULL # Do not remove me!!!
 #' }
 #'
 #' @examples
-#' pc <- PreprocConfig(complexityCutoff = c(0, 10000), expressionCutoff = 5, housekeepingCutoff = 7, logBase = 2, scalingFactor = 10, pseudoCount = 1, typeMatrix = TRUE)
+#' pc <- PreprocConfig(complexityCutoff = c(0, 10000),
+#'                     expressionCutoff = 5,
+#'                     housekeepingCutoff = 7,
+#'                     logBase = 2,
+#'                     scalingFactor = 10,
+#'                     pseudoCount = 1,
+#'                     typeMatrix = TRUE)
+#'
+#' logBase(pc) # Equals 2
+#' logBase(pc) <- 10
+#' logBase(pc) # Equals 10
 #'
 #' @aliases PreprocConfig
 #'
@@ -64,7 +74,26 @@ setClass("PreprocConfig",
 ###
 
 #'
+#' @param complexityCutoff A numeric vector of length 2 representing the lower and
+#' upper bounds of complexity (i.e. the number of detected genes per cell).
+#' @param expressionCutoff A numeric representing the minimal log2 mean expression
+#' per gene below which a gene is considered lowly expressed.
+#' @param housekeepingCutoff A numeric representing the log2 mean expression of
+#' house-keeping genes (i.e. genes that are highly expressed in all cells) per
+#' cell below which a cell is considered low quality.
+#' @param logBase A numeric representing the logarithm base for performing log
+#' transformation on the data.
+#' @param scalingFactor A numeric representing a scaling factor by which to divide
+#' each data point before log transformation.
+#' @param pseudoCount A numeric representing the pseudo count added when performing
+#' log transformation to avoid taking the log of zero.
+#' @param typeMatrix A logical indicating if the dataset should be represented using
+#' the S4 Matrix class (instead of base R matrix) to reduce memory overhead using
+#' sparse matrix representation.
+#'
 #' @describeIn PreprocConfig-class Constructs a new \code{PreprocConfig} object.
+#'
+#' @importFrom methods new
 #'
 #' @export
 PreprocConfig <- function(complexityCutoff, expressionCutoff, housekeepingCutoff, logBase, scalingFactor, pseudoCount, typeMatrix) {
@@ -152,6 +181,9 @@ setMethod("complexityCutoff", "PreprocConfig", function(x) {
   return(x@complexityCutoff)
 })
 
+#'
+#' @param x a \code{PreprocConfig} object.
+#' @param value a value to replace the currently set value.
 #'
 #' @rdname PreprocConfig-class
 #'
@@ -267,6 +299,9 @@ setReplaceMethod("typeMatrix", "PreprocConfig", function(x, value) {
 ### Display
 ###
 
+#'
+#' @rdname PreprocConfig-class
+#'
 #' @export
 setMethod("show", "PreprocConfig", function(object) {
   cat("Complexity cutoff:", complexityCutoff(object), "\n")
@@ -278,6 +313,7 @@ setMethod("show", "PreprocConfig", function(object) {
   cat("Matrix type:", typeMatrix(object), "\n")
 })
 
+#' @importFrom methods is
 is_config_object <- function(object) { return (!is.null(object) & is(object, "PreprocConfig")) }
 
 ### -------------------------------------------------------------------------
@@ -295,15 +331,16 @@ is_config_object <- function(object) { return (!is.null(object) & is(object, "Pr
 #'
 #' @description An S4 class for storing quality control results.
 #'
-#' @slot preprocConfig A object of class \code{PreprocConfig}.
-#' @slot cellIDs A vector.
-#' @slot geneIDs A vector.
-#' @slot statsQC A DataFrame.
+#' @slot preprocConfig A object of class \linkS4class{PreprocConfig}.
+#' @slot cellIDs A character vector of IDs of cells that passed QC.
+#' @slot geneIDs A character vector of IDs of genes that passe QC.
+#' @slot statsQC A \linkS4class{DataFrame} containing statistics gathered through
+#' quality control process.
 #'
 #' @section Methods:
 #' \describe{
-#'   \item{\code{preprocConfig}}{Getter for the PreprocConfig used when creating
-#'   the quality control result.}
+#'   \item{\code{preprocConfig}}{Getter for the \linkS4class{PreprocConfig} object
+#'   used when creating the quality control result.}
 #'   \item{\code{cellIDs}}{Getter for the cell IDs that passed QC.}
 #'   \item{\code{geneIDs}}{Getter for the gene IDs that passed QC}
 #'   \item{\code{statsQC}}{Getter for the quality control statistics}
@@ -329,8 +366,12 @@ setClass("QCResults",
 #'
 #' @describeIn QCResults-class Constructs a new \code{QCResults} object.
 #'
+#' @importFrom methods new
+#' @importClassesFrom S4Vectors DataFrame
+#' @importFrom S4Vectors DataFrame
+#'
 #' @export
-QCResults <- function(preprocConfig, cellIDs = c(), geneIDs = c(), statsQC = S4Vectors::DataFrame()) {
+QCResults <- function(preprocConfig, cellIDs = c(), geneIDs = c(), statsQC = DataFrame()) {
   qc <- new("QCResults",
             preprocConfig = preprocConfig,
             cellIDs = cellIDs,
@@ -407,6 +448,9 @@ setReplaceMethod("statsQC", "QCResults", function(object, value) {
 ### Display
 ###
 
+#'
+#' @rdname QCResults-class
+#'
 #' @export
 setMethod("show", "QCResults", function(object) {
   cat("cellIDs:", length(cellIDs(object)), "IDs\n")
@@ -414,6 +458,7 @@ setMethod("show", "QCResults", function(object) {
   show(statsQC(object))
 })
 
+#' @importFrom methods is
 is_qc_results_object <- function(object) { return (!is.null(object) & is(object, "QCResults")) }
 
 ### -------------------------------------------------------------------------
@@ -426,28 +471,39 @@ is_qc_results_object <- function(object) { return (!is.null(object) & is(object,
 ### -------------------------------------------------------------------------
 ###
 
-setClassUnion("ScandalDataSetOrNULL", c("NULL"))
+#' @import Matrix
 setClassUnion("MatrixOrNULL", c("Matrix", "matrix", "NULL"))
 
 #'
 #' @title ScandalDataSet class
 #'
-#' @description An S4 class for storing single-cell seqeuncing data, analysis
+#' @description An S4 class that stores single-cell seqeuncing data, reduced
+#' dimensions representations of data reuqired in the analysis process such as
+#' t-SNE and UMAP coordinates and the end-product of the analysis which are the
+#' transcriptional programs.
 #'
-#' @details The S4 class \code{ScandalDataSet}
+#' @details The S4 class \code{ScandalDataSet} inherits from and extends Bioconductor's
+#' base class for single-cell related applications, the \linkS4class{SingleCellExperiment}
+#' class.
+#' The idea behind \link{scandal} is that in order to detect intra-tumor heterogeneity
+#' one needs inspect each tumor individually to collect the different transcriptomic
+#' programs that can be found within each tumor and then assess these programs at the
+#' level of the entire dataset to define the programs that generalize best.
+#' Besides the functionality supplied by its superclasses, \code{ScandalDataSet}
+#' supplies methods to keep
 #'
-#' @slot unprocessedData a read-only matrix that contains the unprocessed data that
+#' @slot unprocessedData A read-only matrix that contains the unprocessed data that
 #' allows re-accessing this data without the need to read it from file. Sparse matrix
 #' representation as well as maintaining a single copy for the entire objects tree
 #' decreases the memory overhead of this approach.
-#' @slot preprocConfig a configuration object of class \code{PreprocConfig}.
-#' @slot qualityControl a \code{SimpleList} object containing objects of class
+#' @slot preprocConfig A configuration object of class \linkS4class{PreprocConfig}.
+#' @slot qualityControl A \linkS4class{SimpleList} object containing objects of class
 #' \code{QCResults} representing the quality control results, i.e. the cells and
 #' genes in each individual node that passed qaulity control and are available for
 #' downstream analysis.
-#' @slot nodeID a unique character identifier of the constructed \code{ScandalDataSet}
+#' @slot nodeID A unique character identifier of the constructed \code{ScandalDataSet}
 #' object that should represent the specific sample.
-#' @slot projectID a character identifier common to all the nodes in the constructed
+#' @slot projectID A character identifier common to all the nodes in the constructed
 #' \code{ScandalDataSet} object.
 #'
 #' @section Constructor:
@@ -467,13 +523,44 @@ setClassUnion("MatrixOrNULL", c("Matrix", "matrix", "NULL"))
 #'   specific node (sample).}
 #' }
 #'
+#' @seealso \linkS4class{SummarizedExperiment}, \linkS4class{SingleCellExperiment}, \link{scandal_preprocess}
+#'
 #' @examples
+#' # Building a mock dataset with 30 cells and 100 genes
+#' ngenes <- 100
+#' ncells <- 30
+#' dataset <- matrix(sample(0:1e4, ngenes * ncells, replace = FALSE), nrow = ngenes, ncol = ncells)
+#' rownames(dataset) <- sapply(seq_len(ngenes), function(x) paste0("GENE", x))
+#' colnames(dataset) <- c(sapply(seq_len(ncells / 2), function(x) paste0("TUMOR1-Cell", x)),
+#'                        sapply(seq(from = ncells / 2 + 1, to = ncells), function(x) paste0("TUMOR2-Cell", (x - ncells/2))))
 #'
+#' # Declare a global confguration object for the top-level ScandalDataSet object and
+#' a named list of configuration objects for each single tumor. Note that the names
+#' of the elements in the named list correspond to the names of the tumors that appear
+#' in the column names
+#' global_config <- PreprocConfig(complexityCutoff = c(0, 10000), expressionCutoff = 1, housekeepingCutoff = 1, logBase = 2, scalingFactor = 1, pseudoCount = 1, typeMatrix = TRUE)
+#' tumor_config <- list(TUMOR1 = PreprocConfig(complexityCutoff = c(0, 10000), expressionCutoff = 1, housekeepingCutoff = 1, logBase = 2, scalingFactor = 1, pseudoCount = 1, typeMatrix = TRUE),
+#'                      TUMOR2 = PreprocConfig(complexityCutoff = c(0, 10000), expressionCutoff = 1, housekeepingCutoff = 1, logBase = 2, scalingFactor = 1, pseudoCount = 1, typeMatrix = TRUE))
 #'
+#' # Instantiate a new ScandalDataSet object
+#' sds <- ScandalDataSet(assays = list(tpm = dataset), preprocConfig = global_config, nodeID = "Example1", projectID = "Project1")
+#'
+#' sds # Prints a user-readable summary of sds
+#'
+#' all(colnames(sds) == colnames(dataset)) # TRUE
+#' all(rownames(sds) == rownames(dataset)) # TRUE
+#' nodeIDs(sds) # Return a vector (TUMOR1, TUMOR2)
+#' qualityControl(sds) # Empty list
+#' nodeID(sds) # Returns "Example1"
+#' projectID(sds) # Returns "Project1"
 #'
 #' @rdname ScandalDataSet
 #'
 #' @author Avishay Spitzer
+#'
+#' @import SingleCellExperiment
+#' @import SummarizedExperiment
+#' @importClassesFrom S4Vectors SimpleList
 #'
 #' @export
 #' @exportClass ScandalDataSet
@@ -486,8 +573,6 @@ setClass("ScandalDataSet",
          contains = "SingleCellExperiment"
 )
 
-setIs("ScandalDataSet", "ScandalDataSetOrNULL")
-
 ### - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 ### Constructor
 ###
@@ -499,8 +584,8 @@ setIs("ScandalDataSet", "ScandalDataSetOrNULL")
 #' ScandalDataSet(..., preprocConfig = DefaultPreprocConfig(),
 #'   nodeID = NODE_ID(), projectID = PROJ_ID())
 #'
-#' @param ... arguments to pass to the \code{SingleCellExperiment} constructor.
-#' @param preprocConfig a configuration object of class \code{PreprocConfig}
+#' @param ... arguments to pass to the \linkS4class{SingleCellExperiment} constructor.
+#' @param preprocConfig a configuration object of class \linkS4class{PreprocConfig}
 #' @param nodeID a unique identifier of the constructed \code{ScandalDataSet}
 #' object that should represent the specific sample. If not supplied a unique ID
 #' will be generated randomly however it is advised to set this field.
@@ -508,10 +593,15 @@ setIs("ScandalDataSet", "ScandalDataSetOrNULL")
 #' \code{ScandalDataSet} object.  If not supplied a unique ID
 #' will be generated randomly however it is advised to set this field.
 #'
+#' @importClassesFrom S4Vectors DataFrame SimpleList
+#' @importFrom S4Vectors SimpleList
+#' @importFrom S4Vectors DataFrame
+#' @importFrom methods new is as
+#'
 #' @export
 ScandalDataSet <- function(..., preprocConfig = DefaultPreprocConfig(), nodeID = NODE_ID(), projectID = PROJ_ID()) {
 
-  sce <- SingleCellExperiment::SingleCellExperiment(...)
+  sce <- SingleCellExperiment(...)
 
   if(!is(sce, "SingleCellExperiment")) {
     sce <- as(sce, "SingleCellExperiment")
@@ -520,12 +610,12 @@ ScandalDataSet <- function(..., preprocConfig = DefaultPreprocConfig(), nodeID =
   object <- new("ScandalDataSet", sce,
                 unprocessedData = assay(sce),
                 preprocConfig = preprocConfig,
-                qualityControl = S4Vectors::SimpleList(),
+                qualityControl = SimpleList(),
                 nodeID = nodeID,
                 projectID = projectID)
 
-  int_colData(object)$Scandal <- S4Vectors::DataFrame(row.names = colnames(object))
-  int_elementMetadata(object)$Scandal <- S4Vectors::DataFrame(row.names = rownames(object))
+  int_colData(object)$Scandal <- DataFrame(row.names = colnames(object))
+  int_elementMetadata(object)$Scandal <- DataFrame(row.names = rownames(object))
   int_metadata(object)$Scandal <- list()
 
   return (object)
@@ -561,6 +651,7 @@ setMethod("logtpm", "ScandalDataSet",   function(object, ...) {
 })
 
 #'
+#' @param object a \code{ScandalDataSet} object.
 #' @param value a value to replace the currently set value (applies to all setter methods).
 #'
 #' @rdname ScandalDataSet
@@ -637,6 +728,10 @@ setMethod("preprocConfig", "ScandalDataSet", function(object) {
 #'
 #' @rdname ScandalDataSet
 #'
+#' @importClassesFrom S4Vectors DataFrame SimpleList
+#' @importFrom S4Vectors SimpleList
+#' @importFrom S4Vectors DataFrame
+#'
 #' @export
 setMethod("inspectNode", "ScandalDataSet", function(object, nodeID) {
 
@@ -647,10 +742,10 @@ setMethod("inspectNode", "ScandalDataSet", function(object, nodeID) {
   stopifnot(!is.null(qc))
 
   res <- object[geneIDs(qc), cellIDs(qc)]
-  reducedDims(res) <- S4Vectors::SimpleList()
+  reducedDims(res) <- SimpleList()
   res@nodeID <- nodeID
   res@preprocConfig <- preprocConfig(qc)
-  res@qualityControl <- S4Vectors::SimpleList(qc)
+  res@qualityControl <- SimpleList(qc)
   names(res@qualityControl) <- nodeID
   res@unprocessedData <- res@unprocessedData[, .subset_cells(colnames(res@unprocessedData), nodeID)]
 
@@ -668,6 +763,11 @@ scat <- function(fmt, vals=character(), exdent=2, ...) {
   cat(strwrap(txt, exdent=exdent, ...), sep="\n")
 }
 
+#'
+#' @rdname ScandalDataSet
+#'
+#' @importFrom methods callNextMethod
+#'
 #' @export
 setMethod("show", "ScandalDataSet", function(object) {
   callNextMethod()
@@ -679,8 +779,10 @@ setMethod("show", "ScandalDataSet", function(object) {
   show(preprocConfig(object))
 })
 
+#' @importFrom methods is
 is_scandal_object <- function(object) { return (is.null(object) | !is(object, "ScandalDataSet")) }
 
+#' @importFrom methods is
 is_valid_assay <- function(x) { return (!(is.null(x)) & (is(x, "Matrix") | is.matrix(x))) }
 
 # Generates a random experiment ID by sampling a random integer

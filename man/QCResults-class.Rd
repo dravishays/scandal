@@ -11,10 +11,11 @@
 \alias{geneIDs<-,QCResults-method}
 \alias{statsQC,QCResults-method}
 \alias{statsQC<-,QCResults-method}
+\alias{show,QCResults-method}
 \title{QCResults class}
 \usage{
 QCResults(preprocConfig, cellIDs = c(), geneIDs = c(),
-  statsQC = S4Vectors::DataFrame())
+  statsQC = DataFrame())
 
 \S4method{preprocConfig}{QCResults}(object)
 
@@ -29,6 +30,8 @@ QCResults(preprocConfig, cellIDs = c(), geneIDs = c(),
 \S4method{statsQC}{QCResults}(object)
 
 \S4method{statsQC}{QCResults}(object) <- value
+
+\S4method{show}{QCResults}(object)
 }
 \description{
 An S4 class for storing quality control results.
@@ -41,20 +44,21 @@ An S4 class for storing quality control results.
 \section{Slots}{
 
 \describe{
-\item{\code{preprocConfig}}{A object of class \code{PreprocConfig}.}
+\item{\code{preprocConfig}}{A object of class \linkS4class{PreprocConfig}.}
 
-\item{\code{cellIDs}}{A vector.}
+\item{\code{cellIDs}}{A character vector of IDs of cells that passed QC.}
 
-\item{\code{geneIDs}}{A vector.}
+\item{\code{geneIDs}}{A character vector of IDs of genes that passe QC.}
 
-\item{\code{statsQC}}{A DataFrame.}
+\item{\code{statsQC}}{A \linkS4class{DataFrame} containing statistics gathered through
+quality control process.}
 }}
 
 \section{Methods}{
 
 \describe{
-  \item{\code{preprocConfig}}{Getter for the PreprocConfig used when creating
-  the quality control result.}
+  \item{\code{preprocConfig}}{Getter for the \linkS4class{PreprocConfig} object
+  used when creating the quality control result.}
   \item{\code{cellIDs}}{Getter for the cell IDs that passed QC.}
   \item{\code{geneIDs}}{Getter for the gene IDs that passed QC}
   \item{\code{statsQC}}{Getter for the quality control statistics}
