@@ -34,7 +34,7 @@ scaled first if requested by dividing X by the provided scaling factor.
 }
 \section{Functions}{
 \itemize{
-\item \code{reverse_log_transform}: Reverses the log transformation, i.e \deqn{(log_base^x * scaling_factor) - pseudo_count}
+\item \code{reverse_log_transform}: Reverses the log transformation, i.e \deqn{scaling_factor * (log_base^x - pseudo_count)}
 }}
 
 \author{

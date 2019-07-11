@@ -2,11 +2,11 @@
 % Please edit documentation in R/plotting.R
 \name{scandal_plot}
 \alias{scandal_plot}
-\title{Plot and save}
+\title{Plot and save a figure}
 \usage{
 scandal_plot(p, show_plot = TRUE, save_to_file = FALSE,
-  project_dir = NULL, plots_dir = "plots", filename = NULL,
-  dirname = NULL, device = "png")
+  project_dir = ".", plots_dir = "plots", filename = NULL,
+  dirname = ".", device = "png")
 }
 \arguments{
 \item{p}{a \code{ggplot} object.}
@@ -33,12 +33,29 @@ If NULL and \code{save_to_file} is set to TRUE then an error will be generated.}
 \item{device}{a device to use. See \link{ggsave} for details. Default is "png"}
 }
 \value{
-
+Invisibly returns the plot \code{p}.
 }
 \description{
-
+Plots a figure to the graphics device and saves it to file if
+requested.
 }
 \details{
+This function is basically a wrapper for \link{ggsave} that takes care of
+creating the directories to store plots in using the given arguments.
+}
+\examples{
+# Generate some data
+y <- rnorm(1000)
+
+# Create an ordered scatter plot of the data
+p <- scandal_scatter_plot(x = NULL, y = y, plot_ordered = TRUE, order_by_axis = "y")
+
+# Will print p to the graphics device and save it to the file "scatter.png" in the current working directory
+scandal_plot(p, show_plot = TRUE, save_to_file = TRUE, project_dir = ".", filename = "scatter.png", dirname = ".", plots_dir = ".")
+
+# In this case p will be saved into a "plots" directory which will be created in the current working directory
+# without printing p to the graphics device
+scandal_plot(p, show_plot = FALSE, save_to_file = TRUE, project_dir = ".", filename = "scatter.png", dirname = ".", plots_dir = "plots")
 
 }
 \author{

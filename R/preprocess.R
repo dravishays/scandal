@@ -117,7 +117,7 @@ load_dataset <- function(filename, drop_cols = 1, rownames_col = 1, excluded_sam
 #' @export
 scandal_preprocess <- function(object, preproc_config_list, forced_genes_set = NULL, use_housekeeping_filter = FALSE, verbose = FALSE) {
 
-  stopifnot(!is_scandal_object(object),
+  stopifnot(is_scandal_object(object),
             (is.null(forced_genes_set) | is.vector(forced_genes_set)),
             is.logical(use_housekeeping_filter))
 
@@ -496,7 +496,7 @@ filter_lowly_expressed_genes <- function(x, expression_cutoff, forced_genes_set 
 #'
 #' @export
 scandal_quality_control_stats <- function(object) {
-  stopifnot(!is_scandal_object(object))
+  stopifnot(is_scandal_object(object))
 
   res <- do.call(rbind, lapply(qualityControl(object), function(x) statsQC(x)))
 
@@ -506,7 +506,7 @@ scandal_quality_control_stats <- function(object) {
 #' @export
 scandal_plot_qc_metrics <- function(object, preproc_config_list, show_plot = TRUE, save_to_file = TRUE) {
 
-  stopifnot(!is_scandal_object(object), is.logical(show_plot), is.logical(save_to_file))
+  stopifnot(is_scandal_object(object), is.logical(show_plot), is.logical(save_to_file))
 
   stopifnot(!is.null(preproc_config_list),
             is.list(preproc_config_list),
@@ -534,7 +534,7 @@ plot_cell_complexity_distribution <- function(x, complexity_cutoff, node_id, pro
 
   complexity <- compute_complexity(x)
 
-  p <- generate_scatter_plot(y_data = complexity, title = paste0(node_id, " - Cell complexity distribution"), xlab = "Cells", ylab = "Complexity", plot_ordered = TRUE)
+  p <- scandal_scatter_plot(x = NULL, y = complexity, title = paste0(node_id, " - Cell complexity distribution"), xlab = "Cells", ylab = "Complexity", plot_ordered = TRUE, order_by_axis = "y")
 
   p <- p +
     ggplot2::geom_hline(yintercept = complexity_cutoff[1], linetype = "dashed", color = "red") +
@@ -550,7 +550,7 @@ plot_mean_housekeeping_expression <- function(x, housekeeping_cutoff, node_id, p
 
   hk_mean_exp <- .compute(x, by = "col", method = "mean", log_transform_res = TRUE, genes_subset = SCANDAL_HOUSEKEEPING_GENES_LIST)
 
-  p <- generate_scatter_plot(y_data = hk_mean_exp, title = paste0(node_id, " - Mean expression of housekeeping genes distribution"), xlab = "Cells", ylab = "Mean expression [log2]", plot_ordered = TRUE)
+  p <- scandal_scatter_plot(x = NULL, y = hk_mean_exp, title = paste0(node_id, " - Mean expression of housekeeping genes distribution"), xlab = "Cells", ylab = "Mean expression [log2]", plot_ordered = TRUE, order_by_axis = "y")
 
   p <- p + ggplot2::geom_hline(yintercept = housekeeping_cutoff, linetype = "dashed", color = "red")
 
@@ -564,7 +564,7 @@ plot_mean_expression_frequency <- function(x, expression_cutoff, node_id, projec
 
   gene_exp <- .compute(x, by = "row", method = "mean", log_transform_res = TRUE)
 
-  p <- generate_histogram_plot(data = gene_exp, title = paste0(node_id, " - Mean gene expression frequency"), xlab = "Mean expression [log2]", ylab = "Frequency")
+  p <- scandal_histogram_plot(data = gene_exp, title = paste0(node_id, " - Mean gene expression frequency"), xlab = "Mean expression [log2]", ylab = "Frequency")
 
   p <- p + ggplot2::geom_vline(xintercept = expression_cutoff, linetype = "dashed", color = "red")
 
@@ -576,13 +576,13 @@ plot_mean_expression_frequency <- function(x, expression_cutoff, node_id, projec
 #' @export
 scandal_plot_complexity_distribution <- function(object, show_plot = TRUE, save_to_file = TRUE) {
 
-  stopifnot(!is_scandal_object(object), is.logical(show_plot), is.logical(save_to_file))
+  stopifnot(is_scandal_object(object), is.logical(show_plot), is.logical(save_to_file))
 
   complexity_pre  <- compute_complexity(unprocessedData(object))
   complexity_post <- compute_complexity(assay(object))
 
-  p1 <- generate_whiskers_plot(data = complexity_pre, title = paste0(nodeID(object), " - Complexity distribution pre-QC"), labels = .cell2tumor(colnames(unprocessedData(object))), xlab = NULL, ylab = "Complexity")
-  p2 <- generate_whiskers_plot(data = complexity_post, title = paste0(nodeID(object), " - Complexity distribution post-QC"), labels = .cell2tumor(colnames(object)), xlab = NULL, ylab = "Complexity")
+  p1 <- scandal_whiskers_plot(data = complexity_pre, title = paste0(nodeID(object), " - Complexity distribution pre-QC"), labels = .cell2tumor(colnames(unprocessedData(object))), xlab = NULL, ylab = "Complexity")
+  p2 <- scandal_whiskers_plot(data = complexity_post, title = paste0(nodeID(object), " - Complexity distribution post-QC"), labels = .cell2tumor(colnames(object)), xlab = NULL, ylab = "Complexity")
 
   p <- p1 | p2
 
@@ -607,7 +607,7 @@ scandal_plot_complexity_distribution <- function(object, show_plot = TRUE, save_
 #' @export
 scandal_inspect_node <- function(object, node_id, verbose = FALSE) {
 
-  stopifnot(!is_scandal_object(object))
+  stopifnot(is_scandal_object(object))
   stopifnot(!is.null(node_id), is.character(node_id), length(node_id) == 1)
 
   if (!(node_id %in% nodeIDs(object)))

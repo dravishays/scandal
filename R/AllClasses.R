@@ -780,7 +780,7 @@ setMethod("show", "ScandalDataSet", function(object) {
 })
 
 #' @importFrom methods is
-is_scandal_object <- function(object) { return (is.null(object) | !is(object, "ScandalDataSet")) }
+is_scandal_object <- function(object) { return (!is.null(object) & is(object, "ScandalDataSet")) }
 
 #' @importFrom methods is
 is_valid_assay <- function(x) { return (!(is.null(x)) & (is(x, "Matrix") | is.matrix(x))) }

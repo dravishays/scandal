@@ -34,7 +34,7 @@ scandal_setup_analysis <- function(object, computation_opts = c("correlation" = 
                                    umap_config = scandal_default_umap_config(),
                                    verbose = FALSE) {
 
-  stopifnot(!is_scandal_object(object))
+  stopifnot(is_scandal_object(object))
   stopifnot(!is.null(computation_opts),
             is.vector(computation_opts),
             is.logical(computation_opts),
