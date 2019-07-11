@@ -535,9 +535,9 @@ setClassUnion("MatrixOrNULL", c("Matrix", "matrix", "NULL"))
 #'                        sapply(seq(from = ncells / 2 + 1, to = ncells), function(x) paste0("TUMOR2-Cell", (x - ncells/2))))
 #'
 #' # Declare a global confguration object for the top-level ScandalDataSet object and
-#' a named list of configuration objects for each single tumor. Note that the names
-#' of the elements in the named list correspond to the names of the tumors that appear
-#' in the column names
+#' # a named list of configuration objects for each single tumor. Note that the names
+#' # of the elements in the named list correspond to the names of the tumors that appear
+#' # in the column names
 #' global_config <- PreprocConfig(complexityCutoff = c(0, 10000), expressionCutoff = 1, housekeepingCutoff = 1, logBase = 2, scalingFactor = 1, pseudoCount = 1, typeMatrix = TRUE)
 #' tumor_config <- list(TUMOR1 = PreprocConfig(complexityCutoff = c(0, 10000), expressionCutoff = 1, housekeepingCutoff = 1, logBase = 2, scalingFactor = 1, pseudoCount = 1, typeMatrix = TRUE),
 #'                      TUMOR2 = PreprocConfig(complexityCutoff = c(0, 10000), expressionCutoff = 1, housekeepingCutoff = 1, logBase = 2, scalingFactor = 1, pseudoCount = 1, typeMatrix = TRUE))

@@ -314,7 +314,7 @@ log_transform <- function(x, log_base = 2, scaling_factor = 1, pseudo_count = 1,
 }
 
 #'
-#' @describeIn log_transform Reverses the log transformation, i.e \deqn{(log_base^x * scaling_factor) - pseudo_count}
+#' @describeIn log_transform Reverses the log transformation, i.e \deqn{scaling_factor * (log_base^x - pseudo_count)}
 #'
 #' @export
 reverse_log_transform <- function(x, log_base = 2, scaling_factor = 1, pseudo_count = 1, verbose = FALSE) {
@@ -324,7 +324,7 @@ reverse_log_transform <- function(x, log_base = 2, scaling_factor = 1, pseudo_co
             (is.numeric(scaling_factor) & scaling_factor > 0),
             (is.numeric(pseudo_count) & pseudo_count > 0))
 
-  x <- (log_base^x * scaling_factor) - pseudo_count
+  x <- scaling_factor * (log_base^x - pseudo_count)
 
   return (x)
 }
@@ -548,7 +548,7 @@ plot_mean_housekeeping_expression <- function(x, housekeeping_cutoff, node_id, p
 
   stopifnot(is_valid_assay(x), is.numeric(housekeeping_cutoff), is.character(node_id), is.character(project_id), is.logical(show_plot), is.logical(save_to_file))
 
-  hk_mean_exp <- .compute(x, by = "col", method = "mean", log_transform_res = TRUE, genes_subset = HOUSEKEEPING_GENES_LIST)
+  hk_mean_exp <- .compute(x, by = "col", method = "mean", log_transform_res = TRUE, genes_subset = SCANDAL_HOUSEKEEPING_GENES_LIST)
 
   p <- generate_scatter_plot(y_data = hk_mean_exp, title = paste0(node_id, " - Mean expression of housekeeping genes distribution"), xlab = "Cells", ylab = "Mean expression [log2]", plot_ordered = TRUE)
 
