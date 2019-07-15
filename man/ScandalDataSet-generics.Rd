@@ -11,6 +11,7 @@
 \alias{unprocessedData}
 \alias{preprocConfig}
 \alias{inspectNode}
+\alias{cell2NodeMap}
 \title{ScandalDataSet generics}
 \usage{
 logtpm(object, ...)
@@ -32,6 +33,8 @@ unprocessedData(object, ...)
 preprocConfig(object, ...)
 
 inspectNode(object, nodeID, ...)
+
+cell2NodeMap(object, ...)
 }
 \description{
 ScandalDataSet generics

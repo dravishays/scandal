@@ -13,6 +13,7 @@
 \alias{nodeIDs,ScandalDataSet-method}
 \alias{unprocessedData,ScandalDataSet-method}
 \alias{preprocConfig,ScandalDataSet-method}
+\alias{cell2NodeMap,ScandalDataSet-method}
 \alias{inspectNode,ScandalDataSet-method}
 \alias{show,ScandalDataSet-method}
 \title{ScandalDataSet class}
@@ -39,6 +40,8 @@ ScandalDataSet(..., preprocConfig = DefaultPreprocConfig(),
 
 \S4method{preprocConfig}{ScandalDataSet}(object)
 
+\S4method{cell2NodeMap}{ScandalDataSet}(object)
+
 \S4method{inspectNode}{ScandalDataSet}(object, nodeID)
 
 \S4method{show}{ScandalDataSet}(object)
@@ -55,6 +58,11 @@ will be generated randomly however it is advised to set this field.}
 \item{projectID}{an identifier common to all the nodes in the constructed
 \code{ScandalDataSet} object.  If not supplied a unique ID
 will be generated randomly however it is advised to set this field.}
+
+\item{cell2NodeMap}{a **function** that maps a vector of cell IDs to a vector of
+node IDs to which the cells belong. The default function assumes that the cell ID
+is a string separated by "-" and that the node ID is contained in the substring
+until the first "-" character.}
 
 \item{object}{a \code{ScandalDataSet} object.}
 
@@ -97,6 +105,9 @@ object that should represent the specific sample.}
 
 \item{\code{projectID}}{A character identifier common to all the nodes in the constructed
 \code{ScandalDataSet} object.}
+
+\item{\code{cell2NodeMap}}{A **function** that maps a vector of cell IDs to a vector of
+node IDs to which the cells belong.}
 }}
 
 \section{Constructor}{
@@ -117,6 +128,7 @@ Constructs a \code{ScandalDataSet} object.
   nodes (samples) in the dataset.}
   \item{\code{inspectNode}}{Returns a ScandalDataSet object representing a
   specific node (sample).}
+  \item{\code{cell2NodeMap}}{Getter for the cell2NodeMap function (read-only)}
 }
 }
 

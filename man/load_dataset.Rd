@@ -4,12 +4,18 @@
 \alias{load_dataset}
 \title{Load dataset from file}
 \usage{
-load_dataset(filename, drop_cols = 1, rownames_col = 1,
-  excluded_samples = NULL, as_Matrix = TRUE, verbose = FALSE)
+load_dataset(filename, cell_2_node_map = DEFAULT_CELL_2_NODE_MAP,
+  drop_cols = 1, rownames_col = 1, excluded_samples = NULL,
+  as_Matrix = TRUE, verbose = FALSE)
 }
 \arguments{
 \item{filename}{the name of the file containing the dataset (in tab-delimited
 format).}
+
+\item{cell_2_node_map}{a **function** that maps a vector of cell IDs to a vector of
+node IDs to which the cells belong. The default function assumes that the cell ID
+is a string separated by "-" and that the node ID is contained in the substring
+until the first "-" character.}
 
 \item{drop_cols}{number of columns that should be dropped from the dataset,
 i.e. if drop_cols == 3 then columns 1:3 will be dropped. Default is 1.}

@@ -121,7 +121,7 @@ scandal_plot <- function(p, show_plot = TRUE, save_to_file = FALSE, project_dir 
 #' data <- mvrnorm(n = samples, mu = c(0, 0), Sigma = matrix(c(1, r, r, 1), nrow = 2), empirical = TRUE)
 #'
 #' # Plot the two variables. As scandal_scatter_plot returns a ggplot object we can add to it a
-#' linear regression line showing the positive correlation
+#' # linear regression line showing the positive correlation
 #' scandal_scatter_plot(x = data[, 1], y = data[, 2], plot_ordered = FALSE) +
 #'     geom_smooth(method = "glm")
 #'
@@ -228,7 +228,7 @@ scandal_histogram_plot <- function(data, title = NULL, xlab = NULL, ylab = "Freq
   df <- data.frame(x = seq_len(length(data)), y = data)
 
   p <- ggplot(df, aes(x = y)) +
-    geom_histogram(breaks = seq(0, max(y), by = by), colour = colour, fill = fill, alpha = alpha) +
+    geom_histogram(breaks = seq(0, max(df$y), by = by), colour = colour, fill = fill, alpha = alpha) +
     theme_classic() +
     labs(x = xlab, y = ylab, title = title) +
     theme(plot.title = element_text(hjust = 0.5, size = title_text_size))
@@ -332,7 +332,7 @@ scandal_whiskers_plot <- function(data, labels, title = NULL, xlab = NULL, ylab 
 scandal_tsne_plot <- function(object, tsne_labels = NULL, legend_name = NULL, title = DEFAULT_TITLE(object, "t-SNE plot"), title_text_size = 20) {
 
   stopifnot(is_scandal_object(object))
-  stopifnot((is.null(labels) | (is.vector(labels) & is.character(labels))) | (!is.null(labels) & (length(labels) == ncol(object))))
+  stopifnot((is.null(tsne_labels) | (is.vector(tsne_labels) & is.character(tsne_labels))) | (!is.null(tsne_labels) & (length(tsne_labels) == ncol(object))))
   stopifnot(is.null(title) | is.character(title),
             is.null(legend_name) | is.character(legend_name),
             is.numeric(title_text_size) & title_text_size > 0)
@@ -378,6 +378,10 @@ scandal_tsne_plot <- function(object, tsne_labels = NULL, legend_name = NULL, ti
 scandal_umap_plot <- function(object, umap_labels = NULL, legend_name = NULL, title = DEFAULT_TITLE(object, "UMAP plot"), title_text_size = 20) {
 
   stopifnot(is_scandal_object(object))
+  stopifnot((is.null(umap_labels) | (is.vector(umap_labels) & is.character(umap_labels))) | (!is.null(umap_labels) & (length(umap_labels) == ncol(object))))
+  stopifnot(is.null(title) | is.character(title),
+            is.null(legend_name) | is.character(legend_name),
+            is.numeric(title_text_size) & title_text_size > 0)
 
   umap_data <- reducedDim(object, "umap")
 

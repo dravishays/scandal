@@ -505,6 +505,8 @@ setClassUnion("MatrixOrNULL", c("Matrix", "matrix", "NULL"))
 #' object that should represent the specific sample.
 #' @slot projectID A character identifier common to all the nodes in the constructed
 #' \code{ScandalDataSet} object.
+#' @slot cell2NodeMap A **function** that maps a vector of cell IDs to a vector of
+#' node IDs to which the cells belong.
 #'
 #' @section Constructor:
 #' Constructs a \code{ScandalDataSet} object.
@@ -521,6 +523,7 @@ setClassUnion("MatrixOrNULL", c("Matrix", "matrix", "NULL"))
 #'   nodes (samples) in the dataset.}
 #'   \item{\code{inspectNode}}{Returns a ScandalDataSet object representing a
 #'   specific node (sample).}
+#'   \item{\code{cell2NodeMap}}{Getter for the cell2NodeMap function (read-only)}
 #' }
 #'
 #' @seealso \linkS4class{SummarizedExperiment}, \linkS4class{SingleCellExperiment}, \link{scandal_preprocess}
@@ -569,7 +572,8 @@ setClass("ScandalDataSet",
                    preprocConfig = "PreprocConfig",
                    qualityControl = "SimpleList",
                    nodeID = "character",
-                   projectID = "character"),
+                   projectID = "character",
+                   cell2NodeMap = "function"),
          contains = "SingleCellExperiment"
 )
 
@@ -592,6 +596,10 @@ setClass("ScandalDataSet",
 #' @param projectID an identifier common to all the nodes in the constructed
 #' \code{ScandalDataSet} object.  If not supplied a unique ID
 #' will be generated randomly however it is advised to set this field.
+#' @param cell2NodeMap a **function** that maps a vector of cell IDs to a vector of
+#' node IDs to which the cells belong. The default function assumes that the cell ID
+#' is a string separated by "-" and that the node ID is contained in the substring
+#' until the first "-" character.
 #'
 #' @importClassesFrom S4Vectors DataFrame SimpleList
 #' @importFrom S4Vectors SimpleList
@@ -599,7 +607,7 @@ setClass("ScandalDataSet",
 #' @importFrom methods new is as
 #'
 #' @export
-ScandalDataSet <- function(..., preprocConfig = DefaultPreprocConfig(), nodeID = NODE_ID(), projectID = PROJ_ID()) {
+ScandalDataSet <- function(..., preprocConfig = DefaultPreprocConfig(), nodeID = NODE_ID(), projectID = PROJ_ID(), cell2NodeMap = DEFAULT_CELL_2_NODE_MAP) {
 
   sce <- SingleCellExperiment(...)
 
@@ -612,7 +620,8 @@ ScandalDataSet <- function(..., preprocConfig = DefaultPreprocConfig(), nodeID =
                 preprocConfig = preprocConfig,
                 qualityControl = SimpleList(),
                 nodeID = nodeID,
-                projectID = projectID)
+                projectID = projectID,
+                cell2NodeMap = cell2NodeMap)
 
   int_colData(object)$Scandal <- DataFrame(row.names = colnames(object))
   int_elementMetadata(object)$Scandal <- DataFrame(row.names = rownames(object))
@@ -728,6 +737,14 @@ setMethod("preprocConfig", "ScandalDataSet", function(object) {
 #'
 #' @rdname ScandalDataSet
 #'
+#' @export
+setMethod("cell2NodeMap", "ScandalDataSet", function(object) {
+  return (object@cell2NodeMap)
+})
+
+#'
+#' @rdname ScandalDataSet
+#'
 #' @importClassesFrom S4Vectors DataFrame SimpleList
 #' @importFrom S4Vectors SimpleList
 #' @importFrom S4Vectors DataFrame
@@ -747,7 +764,7 @@ setMethod("inspectNode", "ScandalDataSet", function(object, nodeID) {
   res@preprocConfig <- preprocConfig(qc)
   res@qualityControl <- SimpleList(qc)
   names(res@qualityControl) <- nodeID
-  res@unprocessedData <- res@unprocessedData[, .subset_cells(colnames(res@unprocessedData), nodeID)]
+  res@unprocessedData <- res@unprocessedData[, .subset_cells(colnames(res@unprocessedData), nodeID, cell2NodeMap(object))]
 
   return(res)
 })
@@ -788,6 +805,13 @@ is_valid_assay <- function(x) { return (!(is.null(x)) & (is(x, "Matrix") | is.ma
 # Generates a random experiment ID by sampling a random integer
 NODE_ID <- function() { paste0("NODE", base::sample(1:1e9, 1, replace = FALSE)) }
 PROJ_ID <- function() { paste0("PROJ", base::sample(1:1e9, 1, replace = FALSE)) }
+
+DEFAULT_CELL_2_NODE_MAP <- function(cell_ids) {
+
+  stopifnot(!is.null(cell_ids), is.vector(cell_ids), is.character(cell_ids))
+
+  return (base::gsub("-.*", "", cell_ids))
+}
 
 ### -------------------------------------------------------------------------
 ### ScandalDataSet objects (end)

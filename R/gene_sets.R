@@ -1,4 +1,9 @@
 
+#' @title List of housekeeping genes
+#'
+#' @description The genes contained in the list are ubiquitously expressed
+#' in most cells.
+#'
 #' @export
 SCANDAL_HOUSEKEEPING_GENES_LIST <- c("ACTB", "B2M", "HNRPLL", "HPRT", "PSMB2", "PSMB4", "PPIA", "PRPS1", "PRPS1L1", "PRPS1L3", "PRPS2", "PRPSAP1", "PRPSAP2",
                                      "RPL10", "RPL10A", "RPL10L", "RPL11", "RPL12", "RPL13", "RPL14", "RPL15", "RPL17", "RPL18", "RPL19", "RPL21", "RPL22",
@@ -9,11 +14,18 @@ SCANDAL_HOUSEKEEPING_GENES_LIST <- c("ACTB", "B2M", "HNRPLL", "HPRT", "PSMB2", "
                                      "RPS6KA1", "RPS6KA2", "RPS6KA3", "RPS6KA4", "RPS6KA5", "RPS6KA6", "RPS6KB1", "RPS6KB2", "RPS6KC1", "RPS6KL1", "RPS7", "RPS8",
                                      "RPS9", "RPSA", "TRPS1", "UBB")
 
+#'
+#' @title List of G1S cells cycle markers
+#'
 #' @export
 SCANDAL_G1S_MARKERS <- c("RRM2", "TYMS" , "UBE2T", "CDK1", "HMGB2", "MAD2L1", "PCNA", "UBE2C", "PBK", "TOP2A", "NUSAP1", "KIAA0101", "HIST1H4C",
                          "MLF1IP", "GMNN", "BIRC5", "FAM64A", "RNASEH2A", "MELK", "CENPK", "PTTG1", "TK1", "TPX2", "TMEM106C", "CDCA5", "CKS1B",
                          "CDC45", "MCM3", "CENPM", "AURKB", "PKMYT1", "KIF22","MCM4", "ASF1B", "GINS2", "MCM2", "NUF2", "CDKN3", "GGH", "NDC80",
                          "FEN1", "RRM1", "PRC1" , "DUT", "RAD51AP1", "CKS2", "MCM7", "CCNE2", "ZWINT")
+
+#'
+#' @title List of G2M cells cycle markers
+#'
 #' @export
 SCANDAL_G2M_MARKERS <- c("CCNB1", "UBE2C", "PTTG1", "CDC20", "CCNB2", "TOP2A", "FAM64A", "NUSAP1", "CDKN3", "PBK", "PLK1", "HMGB2", "TPX2", "BIRC5",
                          "MAD2L1", "PRC1", "NUF2", "UBE2T", "CDK1", "CKS2", "CCNA2", "CKAP2", "KNSTRN", "RACGAP1", "CDCA3", "TROAP", "KIF2C", "AURKA",

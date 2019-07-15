@@ -57,6 +57,11 @@ setGeneric("preprocConfig", function(object, ...) standardGeneric("preprocConfig
 #' @export
 setGeneric("inspectNode", function(object, nodeID, ...) standardGeneric("inspectNode"))
 
+#' @rdname ScandalDataSet-generics
+#'
+#' @export
+setGeneric("cell2NodeMap", function(object, ...) standardGeneric("cell2NodeMap"))
+
 ### =========================================================================
 ### Genercis for class ConfigParam
 ### -------------------------------------------------------------------------

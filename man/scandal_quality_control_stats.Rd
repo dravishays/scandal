@@ -7,7 +7,7 @@
 scandal_quality_control_stats(object)
 }
 \arguments{
-\item{object}{a \code{ScandalDataSet} object}
+\item{object}{a \code{ScandalDataSet} object.}
 }
 \description{
 This function returns a \code{DataFrame} containing statistics

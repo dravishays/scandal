@@ -69,7 +69,7 @@ r <- 0.8
 data <- mvrnorm(n = samples, mu = c(0, 0), Sigma = matrix(c(1, r, r, 1), nrow = 2), empirical = TRUE)
 
 # Plot the two variables. As scandal_scatter_plot returns a ggplot object we can add to it a
-linear regression line showing the positive correlation
+# linear regression line showing the positive correlation
 scandal_scatter_plot(x = data[, 1], y = data[, 2], plot_ordered = FALSE) +
     geom_smooth(method = "glm")
 
