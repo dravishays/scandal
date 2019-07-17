@@ -6,12 +6,13 @@
 \alias{qualityControl}
 \alias{qualityControl<-}
 \alias{nodeID}
+\alias{nodeID<-}
 \alias{projectID}
-\alias{nodeIDs}
+\alias{sampleIDs}
 \alias{unprocessedData}
 \alias{preprocConfig}
-\alias{inspectNode}
-\alias{cell2NodeMap}
+\alias{inspectSample}
+\alias{cell2SampleMap}
 \title{ScandalDataSet generics}
 \usage{
 logtpm(object, ...)
@@ -24,17 +25,19 @@ qualityControl(object, ...) <- value
 
 nodeID(object, ...)
 
+nodeID(object, ...) <- value
+
 projectID(object, ...)
 
-nodeIDs(object, ..., return_sorted = FALSE)
+sampleIDs(object, ..., return_sorted = FALSE)
 
 unprocessedData(object, ...)
 
 preprocConfig(object, ...)
 
-inspectNode(object, nodeID, ...)
+inspectSample(object, nodeID, ...)
 
-cell2NodeMap(object, ...)
+cell2SampleMap(object, ...)
 }
 \description{
 ScandalDataSet generics

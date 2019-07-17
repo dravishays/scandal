@@ -505,8 +505,8 @@ setClassUnion("MatrixOrNULL", c("Matrix", "matrix", "NULL"))
 #' object that should represent the specific sample.
 #' @slot projectID A character identifier common to all the nodes in the constructed
 #' \code{ScandalDataSet} object.
-#' @slot cell2NodeMap A **function** that maps a vector of cell IDs to a vector of
-#' node IDs to which the cells belong.
+#' @slot cell2SampleMap A **function** that maps a vector of cell IDs to a vector of
+#' sample IDs to which the cells belong.
 #'
 #' @section Constructor:
 #' Constructs a \code{ScandalDataSet} object.
@@ -519,11 +519,11 @@ setClassUnion("MatrixOrNULL", c("Matrix", "matrix", "NULL"))
 #'   \item{\code{qualityControl}}{Getter/Setter for the qualityControl list}
 #'   \item{\code{nodeID}}{Getter/setter for the nodeID}
 #'   \item{\code{projectID}}{Getter/setter for the projectID}
-#'   \item{\code{nodeIDs}}{Returns a character vector containing the IDs of all
-#'   nodes (samples) in the dataset.}
-#'   \item{\code{inspectNode}}{Returns a ScandalDataSet object representing a
-#'   specific node (sample).}
-#'   \item{\code{cell2NodeMap}}{Getter for the cell2NodeMap function (read-only)}
+#'   \item{\code{sampleIDs}}{Returns a character vector containing the IDs of all
+#'   samples in the dataset.}
+#'   \item{\code{inspectSample}}{Returns a ScandalDataSet object representing a
+#'   specific sample.}
+#'   \item{\code{cell2SampleMap}}{Getter for the cell2SampleMap function (read-only)}
 #' }
 #'
 #' @seealso \linkS4class{SummarizedExperiment}, \linkS4class{SingleCellExperiment}, \link{scandal_preprocess}
@@ -552,7 +552,7 @@ setClassUnion("MatrixOrNULL", c("Matrix", "matrix", "NULL"))
 #'
 #' all(colnames(sds) == colnames(dataset)) # TRUE
 #' all(rownames(sds) == rownames(dataset)) # TRUE
-#' nodeIDs(sds) # Return a vector (TUMOR1, TUMOR2)
+#' sampleIDs(sds) # Return a vector (TUMOR1, TUMOR2)
 #' qualityControl(sds) # Empty list
 #' nodeID(sds) # Returns "Example1"
 #' projectID(sds) # Returns "Project1"
@@ -573,7 +573,7 @@ setClass("ScandalDataSet",
                    qualityControl = "SimpleList",
                    nodeID = "character",
                    projectID = "character",
-                   cell2NodeMap = "function"),
+                   cell2SampleMap = "function"),
          contains = "SingleCellExperiment"
 )
 
@@ -596,8 +596,8 @@ setClass("ScandalDataSet",
 #' @param projectID an identifier common to all the nodes in the constructed
 #' \code{ScandalDataSet} object.  If not supplied a unique ID
 #' will be generated randomly however it is advised to set this field.
-#' @param cell2NodeMap a **function** that maps a vector of cell IDs to a vector of
-#' node IDs to which the cells belong. The default function assumes that the cell ID
+#' @param cell2SampleMap a **function** that maps a vector of cell IDs to a vector of
+#' sample IDs to which the cells belong. The default function assumes that the cell ID
 #' is a string separated by "-" and that the node ID is contained in the substring
 #' until the first "-" character.
 #'
@@ -607,7 +607,7 @@ setClass("ScandalDataSet",
 #' @importFrom methods new is as
 #'
 #' @export
-ScandalDataSet <- function(..., preprocConfig = DefaultPreprocConfig(), nodeID = NODE_ID(), projectID = PROJ_ID(), cell2NodeMap = DEFAULT_CELL_2_NODE_MAP) {
+ScandalDataSet <- function(..., preprocConfig = DefaultPreprocConfig(), nodeID = NODE_ID(), projectID = PROJ_ID(), cell2SampleMap = DEFAULT_CELL_2_NODE_MAP) {
 
   sce <- SingleCellExperiment(...)
 
@@ -621,7 +621,7 @@ ScandalDataSet <- function(..., preprocConfig = DefaultPreprocConfig(), nodeID =
                 qualityControl = SimpleList(),
                 nodeID = nodeID,
                 projectID = projectID,
-                cell2NodeMap = cell2NodeMap)
+                cell2SampleMap = cell2SampleMap)
 
   int_colData(object)$Scandal <- DataFrame(row.names = colnames(object))
   int_elementMetadata(object)$Scandal <- DataFrame(row.names = rownames(object))
@@ -700,6 +700,15 @@ setMethod("nodeID", "ScandalDataSet", function(object) {
 #' @rdname ScandalDataSet
 #'
 #' @export
+setReplaceMethod("nodeID", "ScandalDataSet", function(object, value) {
+  object@nodeID <- value
+  return(object)
+})
+
+#'
+#' @rdname ScandalDataSet
+#'
+#' @export
 setMethod("projectID", "ScandalDataSet", function(object) {
   return(object@projectID)
 })
@@ -708,8 +717,8 @@ setMethod("projectID", "ScandalDataSet", function(object) {
 #' @rdname ScandalDataSet
 #'
 #' @export
-setMethod("nodeIDs", "ScandalDataSet", function(object) {
-  return(unique(gsub("*-.*", "", colnames(object))))
+setMethod("sampleIDs", "ScandalDataSet", function(object) {
+  return(unique(cell2SampleMap(object)(colnames(object))))
 })
 
 #'
@@ -738,8 +747,8 @@ setMethod("preprocConfig", "ScandalDataSet", function(object) {
 #' @rdname ScandalDataSet
 #'
 #' @export
-setMethod("cell2NodeMap", "ScandalDataSet", function(object) {
-  return (object@cell2NodeMap)
+setMethod("cell2SampleMap", "ScandalDataSet", function(object) {
+  return (object@cell2SampleMap)
 })
 
 #'
@@ -750,11 +759,11 @@ setMethod("cell2NodeMap", "ScandalDataSet", function(object) {
 #' @importFrom S4Vectors DataFrame
 #'
 #' @export
-setMethod("inspectNode", "ScandalDataSet", function(object, nodeID) {
+setMethod("inspectSample", "ScandalDataSet", function(object, sampleID, nodeID = NODE_ID()) {
 
-  stopifnot(!is.null(nodeID), is.character(nodeID), nodeID %in% nodeIDs(object))
+  stopifnot(!is.null(sampleID), is.character(sampleID), sampleID %in% sampleIDs(object))
 
-  qc <- qualityControl(object)[[nodeID]]
+  qc <- qualityControl(object)[[sampleID]]
 
   stopifnot(!is.null(qc))
 
@@ -763,8 +772,8 @@ setMethod("inspectNode", "ScandalDataSet", function(object, nodeID) {
   res@nodeID <- nodeID
   res@preprocConfig <- preprocConfig(qc)
   res@qualityControl <- SimpleList(qc)
-  names(res@qualityControl) <- nodeID
-  res@unprocessedData <- res@unprocessedData[, .subset_cells(colnames(res@unprocessedData), nodeID, cell2NodeMap(object))]
+  names(res@qualityControl) <- sampleID
+  res@unprocessedData <- res@unprocessedData[, .subset_cells(colnames(res@unprocessedData), sampleID, cell2SampleMap(object))]
 
   return(res)
 })
@@ -788,7 +797,7 @@ scat <- function(fmt, vals=character(), exdent=2, ...) {
 #' @export
 setMethod("show", "ScandalDataSet", function(object) {
   callNextMethod()
-  scat("nodeIDs(%d): %s\n", nodeIDs(object))
+  scat("sampleIDs(%d): %s\n", sampleIDs(object))
   cat("nodeID:", nodeID(object), "\n")
   cat("projectID:", projectID(object), "\n")
   scat("qualityControl(%d): %s\n", names(qualityControl(object)))

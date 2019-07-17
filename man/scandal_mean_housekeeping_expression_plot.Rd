@@ -4,8 +4,8 @@
 \alias{scandal_mean_housekeeping_expression_plot}
 \title{Housekeeping genes expression plot}
 \usage{
-scandal_mean_housekeeping_expression_plot(x, housekeeping_cutoff, node_id,
-  project_id = ".", show_plot = TRUE, save_to_file = TRUE)
+scandal_mean_housekeeping_expression_plot(x, housekeeping_cutoff,
+  sample_id, project_id = ".", show_plot = TRUE, save_to_file = TRUE)
 }
 \arguments{
 \item{x}{an expression matrix.}
@@ -14,7 +14,7 @@ scandal_mean_housekeeping_expression_plot(x, housekeeping_cutoff, node_id,
 house-keeping genes (i.e. genes that are highly expressed in all cells) per
 cell below which a cell is considered low quality.}
 
-\item{node_id}{an ID of the sample being processed. Used for generating the filename
+\item{sample_id}{an ID of the sample being processed. Used for generating the filename
 and hence is mandatory.}
 
 \item{project_id}{a character identifier of the current project. Used for saving

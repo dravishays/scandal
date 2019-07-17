@@ -4,7 +4,7 @@
 \alias{scandal_mean_expression_frequency_plot}
 \title{Mean gene expression distribution plot}
 \usage{
-scandal_mean_expression_frequency_plot(x, expression_cutoff, node_id,
+scandal_mean_expression_frequency_plot(x, expression_cutoff, sample_id,
   project_id = ".", show_plot = TRUE, save_to_file = TRUE,
   histogram_bin_width = 0.2)
 }
@@ -14,7 +14,7 @@ scandal_mean_expression_frequency_plot(x, expression_cutoff, node_id,
 \item{expression_cutoff}{a numeric representing the minimal log2 mean expression
 per gene below which a gene is considered lowly expressed.}
 
-\item{node_id}{an ID of the sample being processed. Used for generating the filename
+\item{sample_id}{an ID of the sample being processed. Used for generating the filename
 and hence is mandatory.}
 
 \item{project_id}{a character identifier of the current project. Used for saving

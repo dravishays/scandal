@@ -128,7 +128,7 @@ scandal_preprocess <- function(object, preproc_config_list, forced_genes_set = N
 
   stopifnot(!is.null(preproc_config_list),
             is.list(preproc_config_list),
-            base::setequal(nodeIDs(object), names(preproc_config_list)),
+            base::setequal(sampleIDs(object), names(preproc_config_list)),
             base::all(base::lapply(preproc_config_list, function(x) is_config_object(x)) == TRUE))
 
   object <- .scandal_preprocess(object, preproc_config_list = preproc_config_list, forced_genes_set = forced_genes_set, use_housekeeping_filter = use_housekeeping_filter, verbose = verbose)
@@ -543,20 +543,20 @@ scandal_plot_qc_metrics <- function(object, preproc_config_list, show_plot = TRU
 
   stopifnot(!is.null(preproc_config_list),
             is.list(preproc_config_list),
-            base::setequal(nodeIDs(object), names(preproc_config_list)),
+            base::setequal(sampleIDs(object), names(preproc_config_list)),
             base::all(base::lapply(preproc_config_list, function(x) is_config_object(x)) == TRUE))
 
   project_id <- projectID(object)
 
-  for(nid in nodeIDs(object)) {
-    nconf <- preproc_config_list[[nid]]
-    ndata <- assay(object)[, .subset_cells(colnames(object), nid, cell2NodeMap(object)), drop = FALSE]
+  for(sid in sampleIDs(object)) {
+    sconf <- preproc_config_list[[sid]]
+    ndata <- assay(object)[, .subset_cells(colnames(object), sid, cell2SampleMap(object)), drop = FALSE]
 
-    scandal_cell_complexity_distribution_plot(ndata, complexity_cutoff = complexityCutoff(nconf), node_id = nid, project_id = project_id, show_plot = show_plot, save_to_file = save_to_file)
+    scandal_cell_complexity_distribution_plot(ndata, complexity_cutoff = complexityCutoff(sconf), node_id = sid, project_id = project_id, show_plot = show_plot, save_to_file = save_to_file)
 
-    scandal_mean_housekeeping_expression_plot(ndata, housekeeping_cutoff = housekeepingCutoff(nconf), node_id = nid, project_id = project_id, show_plot = show_plot, save_to_file = save_to_file)
+    scandal_mean_housekeeping_expression_plot(ndata, housekeeping_cutoff = housekeepingCutoff(sconf), node_id = sid, project_id = project_id, show_plot = show_plot, save_to_file = save_to_file)
 
-    scandal_mean_expression_frequency_plot(ndata, expression_cutoff = expressionCutoff(nconf), node_id = nid, project_id = project_id, show_plot = show_plot, save_to_file = save_to_file, histogram_bin_width = histogram_bin_width)
+    scandal_mean_expression_frequency_plot(ndata, expression_cutoff = expressionCutoff(sconf), node_id = sid, project_id = project_id, show_plot = show_plot, save_to_file = save_to_file, histogram_bin_width = histogram_bin_width)
   }
 }
 
@@ -571,7 +571,7 @@ scandal_plot_qc_metrics <- function(object, preproc_config_list, show_plot = TRU
 #' @param x an expression matrix.
 #' @param complexity_cutoff a numeric vector of length 2 representing the lower and
 #' upper bounds of complexity (i.e. the number of detected genes per cell).
-#' @param node_id an ID of the sample being processed. Used for generating the filename
+#' @param sample_id an ID of the sample being processed. Used for generating the filename
 #' and hence is mandatory.
 #' @param project_id a character identifier of the current project. Used for saving
 #' generated plot to the project's plots directory. Default is "." (current working
@@ -589,19 +589,19 @@ scandal_plot_qc_metrics <- function(object, preproc_config_list, show_plot = TRU
 #' @author Avishay Spitzer
 #'
 #' @export
-scandal_cell_complexity_distribution_plot <- function(x, complexity_cutoff, node_id, project_id = ".", show_plot = TRUE, save_to_file = TRUE) {
+scandal_cell_complexity_distribution_plot <- function(x, complexity_cutoff, sample_id, project_id = ".", show_plot = TRUE, save_to_file = TRUE) {
 
-  stopifnot(is_valid_assay(x), is.numeric(complexity_cutoff), is.character(node_id), is.character(project_id), is.logical(show_plot), is.logical(save_to_file))
+  stopifnot(is_valid_assay(x), is.numeric(complexity_cutoff), is.character(sample_id), is.character(project_id), is.logical(show_plot), is.logical(save_to_file))
 
   complexity <- compute_complexity(x)
 
-  p <- scandal_scatter_plot(x = NULL, y = complexity, title = paste0(node_id, " - Cell complexity distribution"), xlab = "Cells", ylab = "Complexity", plot_ordered = TRUE, order_by_axis = "y")
+  p <- scandal_scatter_plot(x = NULL, y = complexity, title = paste0(sample_id, " - Cell complexity distribution"), xlab = "Cells", ylab = "Complexity", plot_ordered = TRUE, order_by_axis = "y")
 
   p <- p +
     ggplot2::geom_hline(yintercept = complexity_cutoff[1], linetype = "dashed", color = "red") +
     ggplot2::geom_hline(yintercept = complexity_cutoff[2], linetype = "dashed", color = "red")
 
-  scandal_plot(p, show_plot = show_plot, project_dir = project_id, save_to_file = save_to_file, filename = paste0(node_id, "_complexity.png"), dirname = "QC")
+  scandal_plot(p, show_plot = show_plot, project_dir = project_id, save_to_file = save_to_file, filename = paste0(sample_id, "_complexity.png"), dirname = "QC")
 
   invisible(p)
 }
@@ -617,7 +617,7 @@ scandal_cell_complexity_distribution_plot <- function(x, complexity_cutoff, node
 #' @param housekeeping_cutoff a numeric representing the log2 mean expression of
 #' house-keeping genes (i.e. genes that are highly expressed in all cells) per
 #' cell below which a cell is considered low quality.
-#' @param node_id an ID of the sample being processed. Used for generating the filename
+#' @param sample_id an ID of the sample being processed. Used for generating the filename
 #' and hence is mandatory.
 #' @param project_id a character identifier of the current project. Used for saving
 #' generated plot to the project's plots directory. Default is "." (current working
@@ -635,17 +635,17 @@ scandal_cell_complexity_distribution_plot <- function(x, complexity_cutoff, node
 #' @author Avishay Spitzer
 #'
 #' @export
-scandal_mean_housekeeping_expression_plot <- function(x, housekeeping_cutoff, node_id, project_id = ".", show_plot = TRUE, save_to_file = TRUE) {
+scandal_mean_housekeeping_expression_plot <- function(x, housekeeping_cutoff, sample_id, project_id = ".", show_plot = TRUE, save_to_file = TRUE) {
 
-  stopifnot(is_valid_assay(x), is.numeric(housekeeping_cutoff), is.character(node_id), is.character(project_id), is.logical(show_plot), is.logical(save_to_file))
+  stopifnot(is_valid_assay(x), is.numeric(housekeeping_cutoff), is.character(sample_id), is.character(project_id), is.logical(show_plot), is.logical(save_to_file))
 
   hk_mean_exp <- .compute(x, by = "col", method = "mean", log_transform_res = TRUE, genes_subset = SCANDAL_HOUSEKEEPING_GENES_LIST)
 
-  p <- scandal_scatter_plot(x = NULL, y = hk_mean_exp, title = paste0(node_id, " - Mean expression of housekeeping genes distribution"), xlab = "Cells", ylab = "Mean expression [log2]", plot_ordered = TRUE, order_by_axis = "y")
+  p <- scandal_scatter_plot(x = NULL, y = hk_mean_exp, title = paste0(sample_id, " - Mean expression of housekeeping genes distribution"), xlab = "Cells", ylab = "Mean expression [log2]", plot_ordered = TRUE, order_by_axis = "y")
 
   p <- p + ggplot2::geom_hline(yintercept = housekeeping_cutoff, linetype = "dashed", color = "red")
 
-  scandal_plot(p, show_plot = show_plot, save_to_file = save_to_file, project_dir = project_id, filename = paste0(node_id, "_mean_hk_expression.png"), dirname = "QC")
+  scandal_plot(p, show_plot = show_plot, save_to_file = save_to_file, project_dir = project_id, filename = paste0(sample_id, "_mean_hk_expression.png"), dirname = "QC")
 
   invisible(p)
 }
@@ -660,7 +660,7 @@ scandal_mean_housekeeping_expression_plot <- function(x, housekeeping_cutoff, no
 #' @param x an expression matrix.
 #' @param expression_cutoff a numeric representing the minimal log2 mean expression
 #' per gene below which a gene is considered lowly expressed.
-#' @param node_id an ID of the sample being processed. Used for generating the filename
+#' @param sample_id an ID of the sample being processed. Used for generating the filename
 #' and hence is mandatory.
 #' @param project_id  a character identifier of the current project. Used for saving
 #' generated plot to the project's plots directory. Default is "." (current working
@@ -679,17 +679,17 @@ scandal_mean_housekeeping_expression_plot <- function(x, housekeeping_cutoff, no
 #' @author Avishay Spitzer
 #'
 #' @export
-scandal_mean_expression_frequency_plot <- function(x, expression_cutoff, node_id, project_id = ".", show_plot = TRUE, save_to_file = TRUE, histogram_bin_width = .2) {
+scandal_mean_expression_frequency_plot <- function(x, expression_cutoff, sample_id, project_id = ".", show_plot = TRUE, save_to_file = TRUE, histogram_bin_width = .2) {
 
-  stopifnot(is_valid_assay(x), is.numeric(expression_cutoff), is.character(node_id), is.character(project_id), is.logical(show_plot), is.logical(save_to_file))
+  stopifnot(is_valid_assay(x), is.numeric(expression_cutoff), is.character(sample_id), is.character(project_id), is.logical(show_plot), is.logical(save_to_file))
 
   gene_exp <- .compute(x, by = "row", method = "mean", log_transform_res = TRUE)
 
-  p <- scandal_histogram_plot(data = gene_exp, title = paste0(node_id, " - Mean gene expression frequency"), xlab = "Mean expression [log2]", ylab = "Frequency", by = histogram_bin_width)
+  p <- scandal_histogram_plot(data = gene_exp, title = paste0(sample_id, " - Mean gene expression frequency"), xlab = "Mean expression [log2]", ylab = "Frequency", by = histogram_bin_width)
 
   p <- p + ggplot2::geom_vline(xintercept = expression_cutoff, linetype = "dashed", color = "red")
 
-  scandal_plot(p, show_plot = show_plot, save_to_file = save_to_file, project_dir = project_id, filename = paste0(node_id, "_mean_gene_expression.png"), dirname = "QC")
+  scandal_plot(p, show_plot = show_plot, save_to_file = save_to_file, project_dir = project_id, filename = paste0(sample_id, "_mean_gene_expression.png"), dirname = "QC")
 
   invisible(p)
 }
@@ -727,8 +727,8 @@ scandal_complexity_distribution_plot <- function(object, show_plot = TRUE, save_
   complexity_pre  <- compute_complexity(unprocessedData(object))
   complexity_post  <- compute_complexity(unprocessedData(object)[, colnames(object)])
 
-  p1 <- scandal_whiskers_plot(data = complexity_pre, title = paste0(nodeID(object), " - Complexity distribution pre-QC"), labels = cell2NodeMap(object)(colnames(unprocessedData(object))), xlab = NULL, ylab = "Complexity")
-  p2 <- scandal_whiskers_plot(data = complexity_post, title = paste0(nodeID(object), " - Complexity distribution post-QC"), labels = cell2NodeMap(object)(colnames(object)), xlab = NULL, ylab = "Complexity")
+  p1 <- scandal_whiskers_plot(data = complexity_pre, title = paste0(nodeID(object), " - Complexity distribution pre-QC"), labels = cell2SampleMap(object)(colnames(unprocessedData(object))), xlab = NULL, ylab = "Complexity")
+  p2 <- scandal_whiskers_plot(data = complexity_post, title = paste0(nodeID(object), " - Complexity distribution post-QC"), labels = cell2SampleMap(object)(colnames(object)), xlab = NULL, ylab = "Complexity")
 
   p <- p1 | p2
 
@@ -738,12 +738,12 @@ scandal_complexity_distribution_plot <- function(object, show_plot = TRUE, save_
 }
 
 #'
-#' @title Node inspection
+#' @title Sample inspection
 #'
 #' @description
 #'
 #' @param object a \code{ScandalDataSet} object
-#' @param node_id the ID of the node to be inspected
+#' @param sample_id the ID of the sample to be inspected
 #' @param verbose suppresses all messages from this function. Default is FALSE.
 #'
 #' @details
@@ -753,19 +753,19 @@ scandal_complexity_distribution_plot <- function(object, show_plot = TRUE, save_
 #' @author Avishay Spitzer
 #'
 #' @export
-scandal_inspect_node <- function(object, node_id, verbose = FALSE) {
+scandal_inspect_sample <- function(object, sample_id, node_id = NULL, verbose = FALSE) {
 
   stopifnot(is_scandal_object(object))
-  stopifnot(!is.null(node_id), is.character(node_id), length(node_id) == 1)
+  stopifnot(!is.null(sample_id), is.character(sample_id), length(sample_id) == 1)
 
-  if (!(node_id %in% nodeIDs(object)))
-    stop("Node ", node_id, " not found")
+  if (!(sample_id %in% sampleIDs(object)))
+    stop("Sample ", sample_id, " not found")
 
-  node <- inspectNode(object, nodeID = node_id)
+  sample <- inspectSample(object, sampleID = sample_id, nodeID = node_id)
 
-  preproc_config <- preprocConfig(node)
+  preproc_config <- preprocConfig(sample)
 
-  x <- unprocessedData(node)
+  x <- unprocessedData(sample)
 
   x <- preprocess(as.matrix(x),
                   complexity_cutoff = complexityCutoff(preproc_config),
@@ -774,21 +774,21 @@ scandal_inspect_node <- function(object, node_id, verbose = FALSE) {
                   log_base = logBase(preproc_config),
                   scaling_factor = scalingFactor(preproc_config),
                   pseudo_count = pseudoCount(preproc_config),
-                  sample_id = nodeID(node),
-                  cell_ids = colnames(node),
-                  gene_ids = rownames(node),
+                  sample_id = nodeID(sample),
+                  cell_ids = colnames(sample),
+                  gene_ids = rownames(sample),
                   forced_genes_set = NULL, use_housekeeping_filter = FALSE, verbose = verbose)
 
-  node <- .assign_assay(node, x)
+  sample <- .assign_assay(sample, x)
 
-  return (node)
+  return (sample)
 }
 
 .subset_cells <- function(cell_names, sample_name, map) cell_names[which(map(cell_names) %in% sample_name)]
 
 .sparsity <- function(x) length(which(x == 0)) / (dim(x)[1] * dim(x)[2]) * 100
 
-.qc_stats <- function(x_pre, x_post, nid) {
+.qc_stats <- function(x_pre, x_post, sid) {
 
   cells_pre_qc <- ncol(x_pre)
   cells_post_qc <- ncol(x_post)
@@ -807,31 +807,31 @@ scandal_inspect_node <- function(object, node_id, verbose = FALSE) {
             #"Sparsity post QC" = paste0(.sparsity(x_post), "%"),
             "Sparsity pre QC" = sprintf("%.2f%%",.sparsity(x_pre)),
             "Sparsity post QC" = sprintf("%.2f%%",.sparsity(x_post)),
-            row.names = nid)
+            row.names = sid)
 }
 
 .scandal_preprocess <- function(object, preproc_config_list, forced_genes_set = NULL, use_housekeeping_filter = FALSE, verbose = FALSE) {
 
-  for(nid in nodeIDs(object)) {
-    nconf <- preproc_config_list[[nid]]
+  for(sid in sampleIDs(object)) {
+    sconf <- preproc_config_list[[sid]]
 
-    x_pre <- as.matrix(assay(object)[, .subset_cells(colnames(object), nid, cell2NodeMap(object)), drop = FALSE])
+    x_pre <- as.matrix(assay(object)[, .subset_cells(colnames(object), sid, cell2SampleMap(object)), drop = FALSE])
 
     x <- preprocess(x_pre,
-                    complexity_cutoff = complexityCutoff(nconf),
-                    expression_cutoff = expressionCutoff(nconf),
-                    housekeeping_cutoff = housekeepingCutoff(nconf),
-                    log_base = logBase(nconf),
-                    scaling_factor = scalingFactor(nconf),
-                    pseudo_count = pseudoCount(nconf),
-                    sample_id = nid, cell_ids = NULL,
+                    complexity_cutoff = complexityCutoff(sconf),
+                    expression_cutoff = expressionCutoff(sconf),
+                    housekeeping_cutoff = housekeepingCutoff(sconf),
+                    log_base = logBase(sconf),
+                    scaling_factor = scalingFactor(sconf),
+                    pseudo_count = pseudoCount(sconf),
+                    sample_id = sid, cell_ids = NULL,
                     forced_genes_set = forced_genes_set, use_housekeeping_filter = use_housekeeping_filter, verbose = verbose)
 
-    stats_qc <- .qc_stats(x_pre, x, nid)
+    stats_qc <- .qc_stats(x_pre, x, sid)
 
-    qc <- QCResults(nconf, cellIDs = colnames(x), geneIDs = rownames(x), statsQC = stats_qc)
+    qc <- QCResults(sconf, cellIDs = colnames(x), geneIDs = rownames(x), statsQC = stats_qc)
 
-    qualityControl(object)[[nid]] <- qc
+    qualityControl(object)[[sid]] <- qc
   }
 
   # Coerce to base R matrix

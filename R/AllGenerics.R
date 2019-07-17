@@ -35,12 +35,17 @@ setGeneric("nodeID", function(object, ...) standardGeneric("nodeID"))
 #' @rdname ScandalDataSet-generics
 #'
 #' @export
+setGeneric("nodeID<-", function(object, ..., value) standardGeneric("nodeID<-"))
+
+#' @rdname ScandalDataSet-generics
+#'
+#' @export
 setGeneric("projectID", function(object, ...) standardGeneric("projectID"))
 
 #' @rdname ScandalDataSet-generics
 #'
 #' @export
-setGeneric("nodeIDs", function(object, ..., return_sorted = FALSE) standardGeneric("nodeIDs"))
+setGeneric("sampleIDs", function(object, ..., return_sorted = FALSE) standardGeneric("sampleIDs"))
 
 #' @rdname ScandalDataSet-generics
 #'
@@ -55,12 +60,12 @@ setGeneric("preprocConfig", function(object, ...) standardGeneric("preprocConfig
 #' @rdname ScandalDataSet-generics
 #'
 #' @export
-setGeneric("inspectNode", function(object, nodeID, ...) standardGeneric("inspectNode"))
+setGeneric("inspectSample", function(object, nodeID, ...) standardGeneric("inspectSample"))
 
 #' @rdname ScandalDataSet-generics
 #'
 #' @export
-setGeneric("cell2NodeMap", function(object, ...) standardGeneric("cell2NodeMap"))
+setGeneric("cell2SampleMap", function(object, ...) standardGeneric("cell2SampleMap"))
 
 ### =========================================================================
 ### Genercis for class ConfigParam

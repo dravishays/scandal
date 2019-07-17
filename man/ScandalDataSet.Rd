@@ -9,12 +9,13 @@
 \alias{qualityControl,ScandalDataSet-method}
 \alias{qualityControl<-,ScandalDataSet-method}
 \alias{nodeID,ScandalDataSet-method}
+\alias{nodeID<-,ScandalDataSet-method}
 \alias{projectID,ScandalDataSet-method}
-\alias{nodeIDs,ScandalDataSet-method}
+\alias{sampleIDs,ScandalDataSet-method}
 \alias{unprocessedData,ScandalDataSet-method}
 \alias{preprocConfig,ScandalDataSet-method}
-\alias{cell2NodeMap,ScandalDataSet-method}
-\alias{inspectNode,ScandalDataSet-method}
+\alias{cell2SampleMap,ScandalDataSet-method}
+\alias{inspectSample,ScandalDataSet-method}
 \alias{show,ScandalDataSet-method}
 \title{ScandalDataSet class}
 \usage{
@@ -32,17 +33,20 @@ ScandalDataSet(..., preprocConfig = DefaultPreprocConfig(),
 
 \S4method{nodeID}{ScandalDataSet}(object)
 
+\S4method{nodeID}{ScandalDataSet}(object) <- value
+
 \S4method{projectID}{ScandalDataSet}(object)
 
-\S4method{nodeIDs}{ScandalDataSet}(object)
+\S4method{sampleIDs}{ScandalDataSet}(object)
 
 \S4method{unprocessedData}{ScandalDataSet}(object)
 
 \S4method{preprocConfig}{ScandalDataSet}(object)
 
-\S4method{cell2NodeMap}{ScandalDataSet}(object)
+\S4method{cell2SampleMap}{ScandalDataSet}(object)
 
-\S4method{inspectNode}{ScandalDataSet}(object, nodeID)
+\S4method{inspectSample}{ScandalDataSet}(object, sampleID,
+  nodeID = NODE_ID())
 
 \S4method{show}{ScandalDataSet}(object)
 }
@@ -59,8 +63,8 @@ will be generated randomly however it is advised to set this field.}
 \code{ScandalDataSet} object.  If not supplied a unique ID
 will be generated randomly however it is advised to set this field.}
 
-\item{cell2NodeMap}{a **function** that maps a vector of cell IDs to a vector of
-node IDs to which the cells belong. The default function assumes that the cell ID
+\item{cell2SampleMap}{a **function** that maps a vector of cell IDs to a vector of
+sample IDs to which the cells belong. The default function assumes that the cell ID
 is a string separated by "-" and that the node ID is contained in the substring
 until the first "-" character.}
 
@@ -106,8 +110,8 @@ object that should represent the specific sample.}
 \item{\code{projectID}}{A character identifier common to all the nodes in the constructed
 \code{ScandalDataSet} object.}
 
-\item{\code{cell2NodeMap}}{A **function** that maps a vector of cell IDs to a vector of
-node IDs to which the cells belong.}
+\item{\code{cell2SampleMap}}{A **function** that maps a vector of cell IDs to a vector of
+sample IDs to which the cells belong.}
 }}
 
 \section{Constructor}{
@@ -124,11 +128,11 @@ Constructs a \code{ScandalDataSet} object.
   \item{\code{qualityControl}}{Getter/Setter for the qualityControl list}
   \item{\code{nodeID}}{Getter/setter for the nodeID}
   \item{\code{projectID}}{Getter/setter for the projectID}
-  \item{\code{nodeIDs}}{Returns a character vector containing the IDs of all
-  nodes (samples) in the dataset.}
-  \item{\code{inspectNode}}{Returns a ScandalDataSet object representing a
-  specific node (sample).}
-  \item{\code{cell2NodeMap}}{Getter for the cell2NodeMap function (read-only)}
+  \item{\code{sampleIDs}}{Returns a character vector containing the IDs of all
+  samples in the dataset.}
+  \item{\code{inspectSample}}{Returns a ScandalDataSet object representing a
+  specific sample.}
+  \item{\code{cell2SampleMap}}{Getter for the cell2SampleMap function (read-only)}
 }
 }
 
@@ -156,7 +160,7 @@ sds # Prints a user-readable summary of sds
 
 all(colnames(sds) == colnames(dataset)) # TRUE
 all(rownames(sds) == rownames(dataset)) # TRUE
-nodeIDs(sds) # Return a vector (TUMOR1, TUMOR2)
+sampleIDs(sds) # Return a vector (TUMOR1, TUMOR2)
 qualityControl(sds) # Empty list
 nodeID(sds) # Returns "Example1"
 projectID(sds) # Returns "Project1"

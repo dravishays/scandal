@@ -4,7 +4,7 @@
 \alias{scandal_cell_complexity_distribution_plot}
 \title{Complexity distribution plot}
 \usage{
-scandal_cell_complexity_distribution_plot(x, complexity_cutoff, node_id,
+scandal_cell_complexity_distribution_plot(x, complexity_cutoff, sample_id,
   project_id = ".", show_plot = TRUE, save_to_file = TRUE)
 }
 \arguments{
@@ -13,7 +13,7 @@ scandal_cell_complexity_distribution_plot(x, complexity_cutoff, node_id,
 \item{complexity_cutoff}{a numeric vector of length 2 representing the lower and
 upper bounds of complexity (i.e. the number of detected genes per cell).}
 
-\item{node_id}{an ID of the sample being processed. Used for generating the filename
+\item{sample_id}{an ID of the sample being processed. Used for generating the filename
 and hence is mandatory.}
 
 \item{project_id}{a character identifier of the current project. Used for saving
