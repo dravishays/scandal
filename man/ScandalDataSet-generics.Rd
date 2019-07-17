@@ -11,7 +11,7 @@
 \alias{sampleIDs}
 \alias{unprocessedData}
 \alias{preprocConfig}
-\alias{inspectSample}
+\alias{inspectSamples}
 \alias{cell2SampleMap}
 \title{ScandalDataSet generics}
 \usage{
@@ -35,7 +35,7 @@ unprocessedData(object, ...)
 
 preprocConfig(object, ...)
 
-inspectSample(object, nodeID, ...)
+inspectSamples(object, nodeID, ...)
 
 cell2SampleMap(object, ...)
 }

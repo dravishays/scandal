@@ -521,8 +521,8 @@ setClassUnion("MatrixOrNULL", c("Matrix", "matrix", "NULL"))
 #'   \item{\code{projectID}}{Getter/setter for the projectID}
 #'   \item{\code{sampleIDs}}{Returns a character vector containing the IDs of all
 #'   samples in the dataset.}
-#'   \item{\code{inspectSample}}{Returns a ScandalDataSet object representing a
-#'   specific sample.}
+#'   \item{\code{inspectSamples}}{Returns a ScandalDataSet object representing a
+#'   set of specific samples.}
 #'   \item{\code{cell2SampleMap}}{Getter for the cell2SampleMap function (read-only)}
 #' }
 #'
@@ -759,21 +759,23 @@ setMethod("cell2SampleMap", "ScandalDataSet", function(object) {
 #' @importFrom S4Vectors DataFrame
 #'
 #' @export
-setMethod("inspectSample", "ScandalDataSet", function(object, sampleID, nodeID = NODE_ID()) {
+setMethod("inspectSamples", "ScandalDataSet", function(object, sampleIDs, nodeID = NODE_ID()) {
 
-  stopifnot(!is.null(sampleID), is.character(sampleID), sampleID %in% sampleIDs(object))
+  stopifnot(!is.null(sampleIDs), is.character(sampleIDs), base::all(sampleIDs %in% sampleIDs(object)) == TRUE)
 
-  qc <- qualityControl(object)[[sampleID]]
+  qc_list <- qualityControl(object)[sampleIDs]
 
-  stopifnot(!is.null(qc))
+  stopifnot(!is.null(qc_list), base::all(sampleIDs %in% names(qc_list)) == TRUE)
 
-  res <- object[geneIDs(qc), cellIDs(qc)]
+  res <- object[unique(unname(unlist(sapply(qc_list, function(qc) geneIDs(qc))))),
+                unname(unlist(sapply(qc_list, function(qc) cellIDs(qc))))]
+
   reducedDims(res) <- SimpleList()
   res@nodeID <- nodeID
-  res@preprocConfig <- preprocConfig(qc)
-  res@qualityControl <- SimpleList(qc)
-  names(res@qualityControl) <- sampleID
-  res@unprocessedData <- res@unprocessedData[, .subset_cells(colnames(res@unprocessedData), sampleID, cell2SampleMap(object))]
+  res@preprocConfig <- preprocConfig(object)
+  res@qualityControl <- qc_list
+  names(res@qualityControl) <- sampleIDs
+  res@unprocessedData <- res@unprocessedData[, .subset_cells(colnames(res@unprocessedData), sampleIDs, cell2SampleMap(object))]
 
   return(res)
 })

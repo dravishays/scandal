@@ -60,7 +60,7 @@ setGeneric("preprocConfig", function(object, ...) standardGeneric("preprocConfig
 #' @rdname ScandalDataSet-generics
 #'
 #' @export
-setGeneric("inspectSample", function(object, nodeID, ...) standardGeneric("inspectSample"))
+setGeneric("inspectSamples", function(object, nodeID, ...) standardGeneric("inspectSamples"))
 
 #' @rdname ScandalDataSet-generics
 #'

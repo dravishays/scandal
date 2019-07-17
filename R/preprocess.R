@@ -738,12 +738,12 @@ scandal_complexity_distribution_plot <- function(object, show_plot = TRUE, save_
 }
 
 #'
-#' @title Sample inspection
+#' @title Samples inspection
 #'
 #' @description
 #'
 #' @param object a \code{ScandalDataSet} object
-#' @param sample_id the ID of the sample to be inspected
+#' @param sample_ids a character vector of IDs of the samples to be inspected.
 #' @param verbose suppresses all messages from this function. Default is FALSE.
 #'
 #' @details
@@ -753,19 +753,20 @@ scandal_complexity_distribution_plot <- function(object, show_plot = TRUE, save_
 #' @author Avishay Spitzer
 #'
 #' @export
-scandal_inspect_sample <- function(object, sample_id, node_id = NULL, verbose = FALSE) {
+scandal_inspect_samples <- function(object, sample_ids, node_id = NULL, verbose = FALSE) {
 
   stopifnot(is_scandal_object(object))
-  stopifnot(!is.null(sample_id), is.character(sample_id), length(sample_id) == 1)
+  stopifnot(!is.null(sample_ids), is.character(sample_ids))
 
-  if (!(sample_id %in% sampleIDs(object)))
-    stop("Sample ", sample_id, " not found")
+  if (base::all(sample_ids %in% sampleIDs(object)) != TRUE)
+    stop("At least one of the samples was not found")
 
-  sample <- inspectSample(object, sampleID = sample_id, nodeID = node_id)
+  # Generate a new node that contains the data of all the requested samples
+  node <- inspectSamples(object, sampleIDs = sample_ids, nodeID = node_id)
 
-  preproc_config <- preprocConfig(sample)
+  preproc_config <- preprocConfig(node)
 
-  x <- unprocessedData(sample)
+  x <- unprocessedData(node)
 
   x <- preprocess(as.matrix(x),
                   complexity_cutoff = complexityCutoff(preproc_config),
@@ -774,14 +775,14 @@ scandal_inspect_sample <- function(object, sample_id, node_id = NULL, verbose = 
                   log_base = logBase(preproc_config),
                   scaling_factor = scalingFactor(preproc_config),
                   pseudo_count = pseudoCount(preproc_config),
-                  sample_id = nodeID(sample),
-                  cell_ids = colnames(sample),
-                  gene_ids = rownames(sample),
+                  sample_id = nodeID(node),
+                  cell_ids = colnames(node),
+                  gene_ids = rownames(node),
                   forced_genes_set = NULL, use_housekeeping_filter = FALSE, verbose = verbose)
 
-  sample <- .assign_assay(sample, x)
+  node <- .assign_assay(node, x)
 
-  return (sample)
+  return (node)
 }
 
 .subset_cells <- function(cell_names, sample_name, map) cell_names[which(map(cell_names) %in% sample_name)]

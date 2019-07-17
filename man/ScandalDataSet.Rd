@@ -15,7 +15,7 @@
 \alias{unprocessedData,ScandalDataSet-method}
 \alias{preprocConfig,ScandalDataSet-method}
 \alias{cell2SampleMap,ScandalDataSet-method}
-\alias{inspectSample,ScandalDataSet-method}
+\alias{inspectSamples,ScandalDataSet-method}
 \alias{show,ScandalDataSet-method}
 \title{ScandalDataSet class}
 \usage{
@@ -45,7 +45,7 @@ ScandalDataSet(..., preprocConfig = DefaultPreprocConfig(),
 
 \S4method{cell2SampleMap}{ScandalDataSet}(object)
 
-\S4method{inspectSample}{ScandalDataSet}(object, sampleID,
+\S4method{inspectSamples}{ScandalDataSet}(object, sampleIDs,
   nodeID = NODE_ID())
 
 \S4method{show}{ScandalDataSet}(object)
@@ -130,8 +130,8 @@ Constructs a \code{ScandalDataSet} object.
   \item{\code{projectID}}{Getter/setter for the projectID}
   \item{\code{sampleIDs}}{Returns a character vector containing the IDs of all
   samples in the dataset.}
-  \item{\code{inspectSample}}{Returns a ScandalDataSet object representing a
-  specific sample.}
+  \item{\code{inspectSamples}}{Returns a ScandalDataSet object representing a
+  set of specific samples.}
   \item{\code{cell2SampleMap}}{Getter for the cell2SampleMap function (read-only)}
 }
 }
