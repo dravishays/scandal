@@ -310,6 +310,47 @@ scandal_whiskers_plot <- function(data, labels, title = NULL, xlab = NULL, ylab 
 }
 
 #'
+#' @importFrom reshape2 melt
+#' @importFrom scales squish
+#'
+#' @export
+scandal_simple_heatmap_plot <- function(data, center = TRUE, cluster_rows = TRUE, cluster_columns = TRUE, is_corr_matrix = FALSE,
+                                        legend_name = "Expression", low = "dodgerblue", high = "red", mid = "white", limits = c(NA, NA), midpoint = 0) {
+
+  stopifnot(!is.null(data), is.matrix(data), is.numeric(data), length(dim(data)) == 2)
+
+  if (isTRUE(center))
+    data <- center_matrix(data, by = "row", method = "mean", scale = FALSE)
+
+  if (isTRUE(cluster_columns)) {
+    if (isFALSE(is_corr_matrix))
+      ord <- scrabble::clusta(mat = t(data))
+    else
+      ord <- scrabble::clusta(CR = t(data))
+
+    data <- data[ord$ORD, ]
+  }
+
+  if (isTRUE(cluster_rows)) {
+    if (isFALSE(is_corr_matrix))
+      ord <- scrabble::clusta(mat = data)
+    else
+      ord <- scrabble::clusta(CR = data)
+
+    data <- data[, ord$ORD]
+  }
+
+  melted_data <- melt(data)
+
+  p <- ggplot(data = melted_data, aes(Var2, Var1, fill = value)) +
+    geom_raster() +
+    scale_fill_gradient2(low = low, high = high, mid = mid, limits = limits, midpoint = midpoint, oob = squish, space = "Lab", name = legend_name) +
+    theme_void()
+
+  return (p)
+}
+
+#'
 #' @title Create a t-SNE plot
 #'
 #' @description This function plots the t-SNE coordinates using a scatter plot.
