@@ -73,8 +73,8 @@ until the first "-" character.}
 \item{value}{a value to replace the currently set value (applies to all setter methods).}
 }
 \description{
-An S4 class that stores single-cell seqeuncing data, reduced
-dimensions representations of data reuqired in the analysis process such as
+An S4 class for storing single-cell seqeuncing data, reduced
+dimensions representations of the data reuqired in the analysis process such as
 t-SNE and UMAP coordinates and the end-product of the analysis which are the
 transcriptional programs.
 }
@@ -85,7 +85,8 @@ class.
 The idea behind \link{scandal} is that in order to detect intra-tumor heterogeneity
 one needs inspect each tumor individually to collect the different transcriptomic
 programs that can be found within each tumor and then assess these programs at the
-level of the entire dataset to define the programs that generalize best.
+level of the entire dataset to define the programs that generalize best
+(meta-programs).
 Besides the functionality supplied by its superclasses, \code{ScandalDataSet}
 supplies methods to keep
 }

@@ -199,8 +199,8 @@ scandal_preprocess <- function(object, preproc_config_list, forced_genes_set = N
 #' @author Avishay Spitzer
 #'
 #' @export
-preprocess <- function(x, complexity_cutoff, expression_cutoff, housekeeping_cutoff, log_base, scaling_factor, pseudo_count,
-                       sample_id = NULL, cell_ids = NULL, gene_ids = NULL, forced_genes_set = NULL, use_housekeeping_filter = FALSE, verbose = FALSE) {
+preprocess_matrix <- function(x, complexity_cutoff, expression_cutoff, housekeeping_cutoff, log_base, scaling_factor, pseudo_count,
+                              sample_id = NULL, cell_ids = NULL, gene_ids = NULL, forced_genes_set = NULL, use_housekeeping_filter = FALSE, verbose = FALSE) {
 
   stopifnot(is_valid_assay(x),
             (is.vector(complexity_cutoff) & is.numeric(complexity_cutoff)),
@@ -552,11 +552,11 @@ scandal_plot_qc_metrics <- function(object, preproc_config_list, show_plot = TRU
     sconf <- preproc_config_list[[sid]]
     ndata <- assay(object)[, .subset_cells(colnames(object), sid, cell2SampleMap(object)), drop = FALSE]
 
-    scandal_cell_complexity_distribution_plot(ndata, complexity_cutoff = complexityCutoff(sconf), node_id = sid, project_id = project_id, show_plot = show_plot, save_to_file = save_to_file)
+    scandal_cell_complexity_distribution_plot(ndata, complexity_cutoff = complexityCutoff(sconf), sample_id = sid, project_id = project_id, show_plot = show_plot, save_to_file = save_to_file)
 
-    scandal_mean_housekeeping_expression_plot(ndata, housekeeping_cutoff = housekeepingCutoff(sconf), node_id = sid, project_id = project_id, show_plot = show_plot, save_to_file = save_to_file)
+    scandal_mean_housekeeping_expression_plot(ndata, housekeeping_cutoff = housekeepingCutoff(sconf), sample_id = sid, project_id = project_id, show_plot = show_plot, save_to_file = save_to_file)
 
-    scandal_mean_expression_frequency_plot(ndata, expression_cutoff = expressionCutoff(sconf), node_id = sid, project_id = project_id, show_plot = show_plot, save_to_file = save_to_file, histogram_bin_width = histogram_bin_width)
+    scandal_mean_expression_frequency_plot(ndata, expression_cutoff = expressionCutoff(sconf), sample_id = sid, project_id = project_id, show_plot = show_plot, save_to_file = save_to_file, histogram_bin_width = histogram_bin_width)
   }
 }
 
@@ -768,17 +768,17 @@ scandal_inspect_samples <- function(object, sample_ids, node_id = NULL, verbose 
 
   x <- unprocessedData(node)
 
-  x <- preprocess(as.matrix(x),
-                  complexity_cutoff = complexityCutoff(preproc_config),
-                  expression_cutoff = expressionCutoff(preproc_config),
-                  housekeeping_cutoff = housekeepingCutoff(preproc_config),
-                  log_base = logBase(preproc_config),
-                  scaling_factor = scalingFactor(preproc_config),
-                  pseudo_count = pseudoCount(preproc_config),
-                  sample_id = nodeID(node),
-                  cell_ids = colnames(node),
-                  gene_ids = rownames(node),
-                  forced_genes_set = NULL, use_housekeeping_filter = FALSE, verbose = verbose)
+  x <- preprocess_matrix(as.matrix(x),
+                         complexity_cutoff = complexityCutoff(preproc_config),
+                         expression_cutoff = expressionCutoff(preproc_config),
+                         housekeeping_cutoff = housekeepingCutoff(preproc_config),
+                         log_base = logBase(preproc_config),
+                         scaling_factor = scalingFactor(preproc_config),
+                         pseudo_count = pseudoCount(preproc_config),
+                         sample_id = nodeID(node),
+                         cell_ids = colnames(node),
+                         gene_ids = rownames(node),
+                         forced_genes_set = NULL, use_housekeeping_filter = FALSE, verbose = verbose)
 
   node <- .assign_assay(node, x)
 
@@ -818,15 +818,15 @@ scandal_inspect_samples <- function(object, sample_ids, node_id = NULL, verbose 
 
     x_pre <- as.matrix(assay(object)[, .subset_cells(colnames(object), sid, cell2SampleMap(object)), drop = FALSE])
 
-    x <- preprocess(x_pre,
-                    complexity_cutoff = complexityCutoff(sconf),
-                    expression_cutoff = expressionCutoff(sconf),
-                    housekeeping_cutoff = housekeepingCutoff(sconf),
-                    log_base = logBase(sconf),
-                    scaling_factor = scalingFactor(sconf),
-                    pseudo_count = pseudoCount(sconf),
-                    sample_id = sid, cell_ids = NULL,
-                    forced_genes_set = forced_genes_set, use_housekeeping_filter = use_housekeeping_filter, verbose = verbose)
+    x <- preprocess_matrix(x_pre,
+                           complexity_cutoff = complexityCutoff(sconf),
+                           expression_cutoff = expressionCutoff(sconf),
+                           housekeeping_cutoff = housekeepingCutoff(sconf),
+                           log_base = logBase(sconf),
+                           scaling_factor = scalingFactor(sconf),
+                           pseudo_count = pseudoCount(sconf),
+                           sample_id = sid, cell_ids = NULL,
+                           forced_genes_set = forced_genes_set, use_housekeeping_filter = use_housekeeping_filter, verbose = verbose)
 
     stats_qc <- .qc_stats(x_pre, x, sid)
 
@@ -842,17 +842,17 @@ scandal_inspect_samples <- function(object, sample_ids, node_id = NULL, verbose 
   preproc_config <- preprocConfig(object)
 
   # Call the matrix preprocessing function
-  x <- preprocess(x,
-                  complexity_cutoff = complexityCutoff(preproc_config),
-                  expression_cutoff = expressionCutoff(preproc_config),
-                  housekeeping_cutoff = housekeepingCutoff(preproc_config),
-                  log_base = logBase(preproc_config),
-                  scaling_factor = scalingFactor(preproc_config),
-                  pseudo_count = pseudoCount(preproc_config),
-                  sample_id = nodeID(object),
-                  cell_ids = .aggregate_cell_ids(object),
-                  gene_ids = .aggregate_gene_ids(object),
-                  forced_genes_set = forced_genes_set, use_housekeeping_filter = use_housekeeping_filter, verbose = verbose)
+  x <- preprocess_matrix(x,
+                         complexity_cutoff = complexityCutoff(preproc_config),
+                         expression_cutoff = expressionCutoff(preproc_config),
+                         housekeeping_cutoff = housekeepingCutoff(preproc_config),
+                         log_base = logBase(preproc_config),
+                         scaling_factor = scalingFactor(preproc_config),
+                         pseudo_count = pseudoCount(preproc_config),
+                         sample_id = nodeID(object),
+                         cell_ids = .aggregate_cell_ids(object),
+                         gene_ids = .aggregate_gene_ids(object),
+                         forced_genes_set = forced_genes_set, use_housekeeping_filter = use_housekeeping_filter, verbose = verbose)
 
   stats_qc <- .qc_stats(as.matrix(assay(object)), x, nodeID(object))
 

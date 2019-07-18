@@ -81,6 +81,8 @@ scandal_setup_analysis <- function(object, computation_opts = c("correlation" = 
 
 .compute_cor <- function(x, cor_method) {
 
+  x <- center_matrix(x, by = "row", method = "mean", scale = FALSE)
+
   res <- stats::cor(as.matrix(x), use = "all.obs", method = cor_method)
 
   return (res)
