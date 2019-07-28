@@ -77,6 +77,27 @@ scandal_setup_analysis <- function(object, computation_opts = c("correlation" = 
   return (object)
 }
 
+#'
+#' @importFrom FNN get.knn
+#' @importFrom igraph graph_from_data_frame simplify cluster_louvain membership
+#'
+#' @export
+compute_louvain_clusters <- function(data, k) {
+
+  knn <- get.knn(as.matrix(data), k = k)
+
+  knn <- data.frame(from = rep(1:nrow(knn$nn.index), k), to = as.vector(knn$nn.index), weight = 1/(1 + as.vector(knn$nn.dist)))
+
+  nw <- graph_from_data_frame(knn, directed = FALSE)
+  nw <- simplify(nw)
+
+  lc <- cluster_louvain(nw)
+
+  clusters <- membership(lc)
+
+  return (clusters)
+}
+
 .is_option_requested <- function(opts_vec, opt) (opt %in% names(opts_vec)) && (isTRUE(opts_vec[opt]))
 
 .compute_cor <- function(x, cor_method) {

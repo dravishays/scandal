@@ -30,7 +30,12 @@ Imports:
     methods,
     Matrix,
     ggplot2,
-    patchwork
+    patchwork,
+    FNN,
+    igraph,
+    caTools,
+    ComplexHeatmap,
+    circlize
 Depends:
     SummarizedExperiment,
     SingleCellExperiment
@@ -39,6 +44,7 @@ Collate:
     'AllGenerics.R'
     'AllClasses.R'
     'analysis-tools.R'
+    'cnv_inference.R'
     'gene_sets.R'
     'plotting.R'
     'preprocess.R'
