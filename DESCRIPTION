@@ -35,7 +35,8 @@ Imports:
     igraph,
     caTools,
     ComplexHeatmap,
-    circlize
+    circlize,
+    grid
 Depends:
     SummarizedExperiment,
     SingleCellExperiment

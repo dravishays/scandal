@@ -86,12 +86,12 @@ count_genes_per_chromosome <- function(cnv_matrix, gene_pos_tbl) {
   return (chr_pos_tbl)
 }
 
-#' @importFrom ComplexHeatmap Heatmap rowAnnotation HeatmapAnnotation
+#' @importFrom ComplexHeatmap Heatmap rowAnnotation HeatmapAnnotation draw decorate_heatmap_body
 #' @importFrom circlize colorRamp2
 #' @export
 scandal_cnv_plot <- function(object, cnv_matrix = NULL, gene_positions_table, reference_cells = NULL, show_reference = FALSE,
-                             row_annotation = NULL, row_annotation_cols = NULL,
-                             low = "dodgerblue", mid = "white", high = "red", verbose = FALSE,
+                             row_annotation = NULL, row_annotation_cols = NULL, low = "dodgerblue", mid = "white", high = "red",
+                             save_to_file = TRUE, show_plot = TRUE, filename = NULL, dirname = ".", width = 1600, height = 1000, quality = 100, verbose = FALSE,
                              cluster_rows = FALSE, ...) {
 
   if (!is.null(object))
@@ -125,38 +125,90 @@ scandal_cnv_plot <- function(object, cnv_matrix = NULL, gene_positions_table, re
   if (!is.null(row_annotation)) {
     rann <- as.data.frame(row_annotation)[cell_ids, ]
 
-    ra <- rowAnnotation(df = rann, col = row_annotation_cols)
+    if (is.null(row_annotation_cols))
+      ra <- rowAnnotation(df = rann, show_annotation_name = FALSE)
+    else
+      ra <- rowAnnotation(df = rann, col = row_annotation_cols, show_annotation_name = FALSE)
 
     p <- ra + h
   } else
     p <- h
 
-  draw(p)
+  if (isTRUE(show_plot)) {
+    draw(p)
 
-  decorate_heatmap_body(plot_name, {
+    decorate_heatmap_body(plot_name, .draw_grid(cnv_matrix, gene_positions_table))
+  }
 
-    gpc <- count_genes_per_chromosome(cnv_matrix, gene_positions_table)
+  if (isTRUE(save_to_file)) {
 
-    sgpc <- sum(gpc)
+    if (is.null(filename))
+      filename <- paste0(plot_name, ".jpeg")
 
-    rgpcs <- 0
+    file <- paste0(dirname, "/", filename)
 
-    for (i in 1:(length(gpc) - 1)) {
-
-      cgpc <- rgpcs + gpc[i]
-
-      grid.lines(x = c(cgpc/sgpc, cgpc/sgpc), c(0, 1), gp = gpar(lty = 1, lwd = 1))
-
-      rgpcs <- rgpcs + gpc[i]
-    }
-
-    grid.lines(x = c(0, 1), c(0, 0), gp = gpar(lty = 1, lwd = 1))
-    grid.lines(x = c(0, 1), c(1, 1), gp = gpar(lty = 1, lwd = 1))
-    grid.lines(x = c(0, 0), c(0, 1), gp = gpar(lty = 1, lwd = 1))
-    grid.lines(x = c(1, 1), c(0, 1), gp = gpar(lty = 1, lwd = 1))
-  })
+    jpeg(filename = file, width = width, height = height, quality = quality)
+    draw(p)
+    decorate_heatmap_body(plot_name, .draw_grid(cnv_matrix, gene_positions_table))
+    dev.off()
+  }
 
   invisible(p)
+}
+
+#' @export
+scandal_compute_cnv_signal_vs_correlation <- function(object, cnv_matrix = NULL, gene_positions_table, hotspot_threshold = .9, verbose = FALSE) {
+
+  if (!is.null(object))
+    cnv_matrix <- reducedDim(object, "cnv")
+
+  if (is.null(cnv_matrix))
+    stop("CNV matrix not found, did you forget to run scandal_infer_cnv first?")
+
+  cnv_matrix <- t(cnv_matrix)
+
+  # Square the CNV matrix
+  tmp <- cnv_matrix^2
+
+  # Calculate the hotspots - areas with high signal
+  pos_mean <- rowMeans(tmp)
+  hotspots <- names(pos_mean[pos_mean >= quantile(pos_mean, hotspot_threshold)])
+  tmp <- tmp[hotspots, ]
+
+  # Compute the mean squared CNV signal per
+  cnv_signal <- colMeans(tmp)
+
+  # Compute the tumor CNV profile
+  tumor_cnv0 <- rowMeans(cnv_matrix)
+
+  # Compute the correlation between each cell and the tumor CNV profile
+  cnv_correlation <- apply(cnv_matrix, 2, cor, y = tumor_cnv0, method = "pearson")
+
+  # Return the result as a data frame with two variables
+  res <- data.frame(Signal = cnv_signal, Correlation = cnv_correlation, row.names = colnames(cnv_matrix), stringsAsFactors = FALSE)
+
+  return (res)
+}
+
+#' @export
+scandal_cnv_signal_vs_correlation_plot <- function(cnv_s_vs_c, signal_threshold = 0.05, correlation_threshold = 0.05, title = NULL) {
+
+  cnv_detected <- rep("Non-classifiable", nrow(cnv_s_vs_c))
+
+  cnv_detected[which(cnv_s_vs_c$Signal >= signal_threshold & cnv_s_vs_c$Correlation >= correlation_threshold)] <- "Detected"
+  cnv_detected[which(cnv_s_vs_c$Signal <  signal_threshold & cnv_s_vs_c$Correlation <  correlation_threshold)] <- "Not detected"
+  cnv_detected[which(cnv_s_vs_c$Signal <  signal_threshold & cnv_s_vs_c$Correlation >= correlation_threshold)] <- "Low signal"
+  cnv_detected[which(cnv_s_vs_c$Signal >= signal_threshold & cnv_s_vs_c$Correlation <  correlation_threshold)] <- "Low correlation"
+
+  non_classifiable <- (length(which(cnv_detected == "Low signal" | cnv_detected == "Low correlation")) / length(cnv_detected)) * 100
+
+  p <- scandal_scatter_plot(x = cnv_s_vs_c$Correlation, y = cnv_s_vs_c$Signal, labels = cnv_detected, color_legend_name = "CNV\ndetected",
+                            title = title, xlab = "CNV Correlation", ylab = "CNV Signal", plot_ordered = FALSE) +
+        geom_vline(xintercept = correlation_threshold) +
+        geom_hline(yintercept = signal_threshold)  +
+    labs(caption = sprintf("%.2f%% of cells are non-classifiable", non_classifiable))
+
+  p
 }
 
 ### =========================================================================
@@ -261,11 +313,15 @@ CHRs <- c("chr1", "chr2", "chr3", "chr4", "chr5", "chr6", "chr7", "chr8", "chr9"
   gene_pos_tbl <- gene_pos_tbl[gene_pos_tbl$Gene %in% rownames(cnv_matrix), ]
 
   # Reorder the expression matrix according to the positions of the genes in each chromosome
-  message(paste0("Reordering genes according to chromosomal location"))
+  if (isTRUE(verbose))
+    message(paste0("Reordering genes according to chromosomal location"))
+
   cnv_matrix <- cnv_matrix[gene_pos_tbl$Gene, ]
 
   # Log-transform the matrix
-  message(paste0("Log2 expression matrix [TPM/10]"))
+  if (isTRUE(verbose))
+    message(paste0("Log2 expression matrix [TPM/10]"))
+
   cnv_matrix <- log_transform(cnv_matrix)
 
   # Center the matrix
@@ -368,4 +424,28 @@ CHRs <- c("chr1", "chr2", "chr3", "chr4", "chr5", "chr6", "chr7", "chr8", "chr9"
   colnames(res) <- colnames(m)
 
   return(res)
+}
+
+#' @importFrom grid grid.lines gpar
+.draw_grid <- function(cnv_matrix, gene_positions_table) {
+
+  gpc <- count_genes_per_chromosome(cnv_matrix, gene_positions_table)
+
+  sgpc <- sum(gpc)
+
+  rgpcs <- 0
+
+  for (i in 1:(length(gpc) - 1)) {
+
+    cgpc <- rgpcs + gpc[i]
+
+    grid.lines(x = c(cgpc/sgpc, cgpc/sgpc), c(0, 1), gp = gpar(lty = 1, lwd = 1))
+
+    rgpcs <- rgpcs + gpc[i]
+  }
+
+  grid.lines(x = c(0, 1), c(0, 0), gp = gpar(lty = 1, lwd = 1))
+  grid.lines(x = c(0, 1), c(1, 1), gp = gpar(lty = 1, lwd = 1))
+  grid.lines(x = c(0, 0), c(0, 1), gp = gpar(lty = 1, lwd = 1))
+  grid.lines(x = c(1, 1), c(0, 1), gp = gpar(lty = 1, lwd = 1))
 }
