@@ -15,7 +15,7 @@ SCANDAL_HOUSEKEEPING_GENES_LIST <- c("ACTB", "B2M", "HNRPLL", "HPRT", "PSMB2", "
                                      "RPS9", "RPSA", "TRPS1", "UBB")
 
 #'
-#' @title List of G1S cells cycle markers
+#' @title List of G1S cell-cycle markers
 #'
 #' @export
 SCANDAL_G1S_MARKERS <- c("RRM2", "TYMS" , "UBE2T", "CDK1", "HMGB2", "MAD2L1", "PCNA", "UBE2C", "PBK", "TOP2A", "NUSAP1", "KIAA0101", "HIST1H4C",
@@ -24,7 +24,7 @@ SCANDAL_G1S_MARKERS <- c("RRM2", "TYMS" , "UBE2T", "CDK1", "HMGB2", "MAD2L1", "P
                          "FEN1", "RRM1", "PRC1" , "DUT", "RAD51AP1", "CKS2", "MCM7", "CCNE2", "ZWINT")
 
 #'
-#' @title List of G2M cells cycle markers
+#' @title List of G2M cell-cycle markers
 #'
 #' @export
 SCANDAL_G2M_MARKERS <- c("CCNB1", "UBE2C", "PTTG1", "CDC20", "CCNB2", "TOP2A", "FAM64A", "NUSAP1", "CDKN3", "PBK", "PLK1", "HMGB2", "TPX2", "BIRC5",

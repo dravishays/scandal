@@ -95,7 +95,7 @@ compute_louvain_clusters <- function(data, k) {
 
   clusters <- membership(lc)
   clusters <- as.character(clusters)
-  names(clusters) <- colnames(data)
+  names(clusters) <- rownames(data)
 
   return (clusters)
 }

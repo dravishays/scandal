@@ -3,12 +3,12 @@
 \docType{data}
 \name{SCANDAL_G1S_MARKERS}
 \alias{SCANDAL_G1S_MARKERS}
-\title{List of G1S cells cycle markers}
+\title{List of G1S cell-cycle markers}
 \format{An object of class \code{character} of length 49.}
 \usage{
 SCANDAL_G1S_MARKERS
 }
 \description{
-List of G1S cells cycle markers
+List of G1S cell-cycle markers
 }
 \keyword{datasets}

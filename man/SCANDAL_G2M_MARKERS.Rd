@@ -3,12 +3,12 @@
 \docType{data}
 \name{SCANDAL_G2M_MARKERS}
 \alias{SCANDAL_G2M_MARKERS}
-\title{List of G2M cells cycle markers}
+\title{List of G2M cell-cycle markers}
 \format{An object of class \code{character} of length 65.}
 \usage{
 SCANDAL_G2M_MARKERS
 }
 \description{
-List of G2M cells cycle markers
+List of G2M cell-cycle markers
 }
 \keyword{datasets}
