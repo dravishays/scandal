@@ -8,7 +8,7 @@ scandal_tsne_plot(object, tsne_labels = NULL, legend_name = NULL,
   title = DEFAULT_TITLE(object, "t-SNE plot"), title_text_size = 20)
 }
 \arguments{
-\item{object}{a \code{\links4class{ScandalDataSet}} object.}
+\item{object}{a \links4class{ScandalDataSet} object.}
 
 \item{tsne_labels}{an optional vector of character labels for each (x, y) point.
 Used for color coding each point. Default is NULL.}

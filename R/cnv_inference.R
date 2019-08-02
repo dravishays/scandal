@@ -298,6 +298,7 @@ scandal_classify_cells <- function(cnv_scores, clusters, min_cluster_cnv_freq = 
 
   malignant <- setNames(rep("Unresolved", nrow(cnv_scores)), nm = rownames(cnv_scores))
 
+  # Simple classification - leaving the low signal and low correlation cells as "Unresolved"
   if (is.null(clusters)) {
 
     malignant[cnv_scores$CNVDetected == "Detected"] <- "Malignant"
@@ -306,6 +307,7 @@ scandal_classify_cells <- function(cnv_scores, clusters, min_cluster_cnv_freq = 
     data$Malignant <- malignant
 
   } else {
+    # Complex classifiaction
 
     data$Cluster <- clusters[rownames(data)]
 
@@ -314,12 +316,9 @@ scandal_classify_cells <- function(cnv_scores, clusters, min_cluster_cnv_freq = 
       summarise (n = n()) %>%
       mutate(Freq = n / sum(n))
 
-    malignant_clusters <- filter(cnv_freq_per_cluster,
-                                 CNVDetected == "Detected",
-                                 Freq >= min_cluster_cnv_freq)
-    nonmalignant_clusters <- filter(cnv_freq_per_cluster,
-                                    CNVDetected == "Not detected",
-                                    Freq >= min_cluster_cnv_freq)
+    malignant_clusters <- filter(cnv_freq_per_cluster, CNVDetected == "Detected", Freq >= min_cluster_cnv_freq)
+
+    nonmalignant_clusters <- filter(cnv_freq_per_cluster, CNVDetected == "Not detected", Freq >= min_cluster_cnv_freq)
 
     data <- as_tibble(data, rownames = "CellID")
 
