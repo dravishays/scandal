@@ -8,7 +8,7 @@ scandal_umap_plot(object, umap_labels = NULL, legend_name = NULL,
   title = DEFAULT_TITLE(object, "UMAP plot"), title_text_size = 20)
 }
 \arguments{
-\item{object}{a \links4class{ScandalDataSet} object.}
+\item{object}{a \linkS4class{ScandalDataSet} object.}
 
 \item{umap_labels}{an optional vector of character labels for each (x, y) point.
 Used for color coding each point. Default is NULL.}

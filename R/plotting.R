@@ -355,7 +355,7 @@ scandal_simple_heatmap_plot <- function(data, center = TRUE, cluster_rows = TRUE
 #'
 #' @description This function plots the t-SNE coordinates using a scatter plot.
 #'
-#' @param object a \links4class{ScandalDataSet} object.
+#' @param object a \linkS4class{ScandalDataSet} object.
 #' @param tsne_labels  an optional vector of character labels for each (x, y) point.
 #' Used for color coding each point. Default is NULL.
 #' @param legend_name the name of the leged. Default is NULL (no label).
@@ -401,7 +401,7 @@ scandal_tsne_plot <- function(object, tsne_labels = NULL, legend_name = NULL, ti
 #'
 #' @description This function plots the UMAP coordinates using a scatter plot.
 #'
-#' @param object a \links4class{ScandalDataSet} object.
+#' @param object a \linkS4class{ScandalDataSet} object.
 #' @param umap_labels  an optional vector of character labels for each (x, y) point.
 #' Used for color coding each point. Default is NULL.
 #' @param legend_name the name of the leged. Default is NULL (no label).
