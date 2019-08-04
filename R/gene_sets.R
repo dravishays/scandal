@@ -32,3 +32,15 @@ SCANDAL_G2M_MARKERS <- c("CCNB1", "UBE2C", "PTTG1", "CDC20", "CCNB2", "TOP2A", "
                          "CENPF", "KPNA2", "KIF20A", "ECT2", "BUB1", "CDCA8", "BUB1B", "TACC3", "NDC80", "TTK", "TUBA1C", "NCAPD2", "ARL6IP1", "KIF4A",
                          "CKAP2L", "MZT1", "KIFC1", "KIF22", "TYMS", "SPAG5", "ANP32E", "KIF11", "PSRC1", "TUBB4B", "SMC4", "MXD3", "CDC25B", "OIP5",
                          "GGH", "REEP4", "FOXM1", "TMPO", "GPSM2", "HMGB3", "ARHGAP11A", "RANGAP1", "H2AFZ")
+
+#'
+#' @title List of oligodendrocyte markers
+#'
+#' @export
+SCANDAL_OLIGODENDROCYTE_MARKERS <- c("MOBP", "OPALIN", "CLDN11", "PLP1", "TF", "MBP", "MOG", "MAG")
+
+#'
+#' @title List of macrophage markers
+#'
+#' @export
+SCANDAL_MACROPHAGE_MARKERS <- c("CD14", "AIF1", "CD163", "TYROBP", "CSF1R", "CD74", "CD68")

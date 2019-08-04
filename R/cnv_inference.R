@@ -160,6 +160,7 @@ scandal_compute_cnv_matrix <- function(x, gene_positions_table, reference_cells,
 
 #' @importFrom ComplexHeatmap Heatmap rowAnnotation HeatmapAnnotation draw decorate_heatmap_body
 #' @importFrom circlize colorRamp2
+#' @importFrom grDevices dev.off jpeg
 #' @export
 scandal_cnv_plot <- function(object, cnv_matrix = NULL, gene_positions_table, reference_cells = NULL, show_reference = FALSE,
                              row_annotation = NULL, row_annotation_cols = NULL, low = "dodgerblue", mid = "white", high = "red",
@@ -240,6 +241,7 @@ scandal_cnv_plot <- function(object, cnv_matrix = NULL, gene_positions_table, re
 #' signal (the sum of squares of computed CNVs) and CNV correlation (the pearson's
 #' correlation between the cell CNV profile and the tumor's CNV profile).
 #'
+#' @importFrom stats cor quantile
 #' @export
 scandal_compute_cnv_scores <- function(object, cnv_matrix = NULL, gene_positions_table, hotspot_threshold = .9, verbose = FALSE) {
 
@@ -291,8 +293,9 @@ scandal_classify_cnv_scores <- function(cnv_scores, signal_threshold = 0.05, cor
 
 #' @importFrom dplyr %>% group_by summarise n mutate filter select
 #' @importFrom tibble as_tibble
+#' @importFrom stats setNames
 #' @export
-scandal_classify_cells <- function(cnv_scores, clusters, min_cluster_cnv_freq = .5, return_all = FALSE, verbose = FALSE) {
+scandal_classify_cells <- function(cnv_scores, clusters, cnv_matrix = NULL, min_cluster_cnv_freq = .5, return_all = FALSE, verbose = FALSE) {
 
   data <- cnv_scores
 
@@ -311,6 +314,9 @@ scandal_classify_cells <- function(cnv_scores, clusters, min_cluster_cnv_freq = 
 
     data$Cluster <- clusters[rownames(data)]
 
+    if (isTRUE(verbose))
+      message("Computing CNV frequency per cluster")
+
     cnv_freq_per_cluster <- data %>%
       group_by(Cluster, CNVDetected) %>%
       summarise (n = n()) %>%
@@ -318,7 +324,13 @@ scandal_classify_cells <- function(cnv_scores, clusters, min_cluster_cnv_freq = 
 
     malignant_clusters <- filter(cnv_freq_per_cluster, CNVDetected == "Detected", Freq >= min_cluster_cnv_freq)
 
+    if (isTRUE(verbose))
+      message("Malignant clusters: ", malignant_clusters)
+
     nonmalignant_clusters <- filter(cnv_freq_per_cluster, CNVDetected == "Not detected", Freq >= min_cluster_cnv_freq)
+
+    if (isTRUE(verbose))
+      message("Nonmalignant clusters: ", nonmalignant_clusters)
 
     data <- as_tibble(data, rownames = "CellID")
 
@@ -340,6 +352,40 @@ scandal_classify_cells <- function(cnv_scores, clusters, min_cluster_cnv_freq = 
 
     if (nrow(mal_in_nrm) > 0)
       malignant[mal_in_nrm$CellID] <- "MiNC"
+
+    # Classify the low signal and low correlation scores
+    if (!is.null(cnv_matrix)) {
+
+      int_scores <- data %>%
+        group_by(Cluster) %>%
+        select(CellID, Cluster, CNVDetected) %>%
+        filter(CNVDetected == "Low signal" | CNVDetected == "Low correlation", Cluster %in% malignant_clusters$Cluster)
+
+      cnv_matrix <- t(cnv_matrix)
+
+      int_scores$CNVCorOwn <- rep(0, nrow(int_scores))
+      int_scores$CNVCorOth <- rep(0, nrow(int_scores))
+
+      for (i in seq_len(nrow(int_scores))) {
+        score_i <- int_scores[i, ]
+
+        cnv_i <- cnv_matrix[, score_i$CellID]
+        cnv_c <- cnv_matrix[, (data %>% filter(Cluster == data$Cluster))$CellID]
+
+        cnv_c <- rowMeans(cnv_c)
+
+        int_scores$CNVCorOwn[i] <- cor(cnv_i, cnv_c)
+
+        int_scores$CNVCorOth[i] <- max(sapply(nonmalignant_clusters$Cluster, function(x) {
+          cnv_x <- cnv_matrix[, (data %>% filter(x == data$Cluster))$CellID]
+          cnv_x <- rowMeans(cnv_x)
+          cor(cnv_i, cnv_x)
+        }))
+      }
+
+      malignant[(int_scores %>% filter(CNVCorOwn > 2*CNVCorOth))$CellID] <- "MbCA"
+      malignant[(int_scores %>% filter(CNVCorOwn <= 2*CNVCorOth))$CellID] <- "Unresolved"
+    }
 
     data$Malignant <- malignant
   }
@@ -373,6 +419,7 @@ scandal_cnv_scores_plot <- function(cnv_scores, signal_threshold = 0.05, correla
 ### -------------------------------------------------------------------------
 ###
 
+#' @importFrom utils read.delim
 #' @export
 load_gene_pos_file <- function(filename = "gencode_v19_gene_pos.txt") {
 
@@ -563,6 +610,7 @@ CHRs <- c("chr1", "chr2", "chr3", "chr4", "chr5", "chr6", "chr7", "chr8", "chr9"
   return (movavg_m)
 }
 
+#' @importFrom stats median
 .assign_cnv_score <- function(m, ref_group, scaling_factor, base_metric, verbose) {
 
   calc_score <- function(x) {

@@ -36,7 +36,8 @@ Imports:
     caTools,
     ComplexHeatmap,
     circlize,
-    grid
+    grid,
+    MASS
 Depends:
     SummarizedExperiment,
     SingleCellExperiment
