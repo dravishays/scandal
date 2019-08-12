@@ -4,10 +4,65 @@
 ### -------------------------------------------------------------------------
 ###
 
+#'
+#' @title Programs of intra-sample heterogeneity
+#'
+#' @description This function extracts transpriptomic programs
+#'
+#' @param object
+#' @param samples
+#' @param clustering_data
+#' @param algorithm
+#' @param rank
+#' @param ngenes1
+#' @param ngenes2
+#' @param sd_threshold
+#' @param filter_method
+#' @param bin_control
+#' @param n_control_bins
+#' @param n_bin_genes
+#' @param return_all
+#' @param verbose
+#' @param ... further arguments passed to nmf function
+#'
+#' @details Generally, the algorithm extracts programs in a bottoms-up approach
+#' starting from extracting programs within each individual sample. The algorithm
+#' then detecs highly variable programs that best represent coherent program clusters
+#' and aggregates these clusters into programs that generalize accross all samples.
+#' \cr
+#' The algorithm performs the following steps:
+#' \cr
+#' \enumerate{
+#'   \item Call \link{prepare_samples} to prepare a \linkS4class{ScandalDataSet} for
+#'   each individual sample. This step can be bypassed by supplying a valid \code{samples}
+#'   argument.
+#'   \item For each individual sample generate a predefined number of clusters
+#'   (configurable by the \code{rank} parameter). At the moment the only supported
+#'   clustering algorithm is NMF via \link{nmf_run}. This step can be bypassed by supplying
+#'   a valid \code{clustering_data} argument.
+#'   \item For each sample extract an initial list of within-sample programs by calling
+#'   \link{nmf_extract_programs}. The number of genes in each program is configurable by
+#'   the \code{ngenes1} parameter. The number of initial within-sample programs correpsonds
+#'   to \code{rank}.
+#'   \item For each sample score the cells for each of the within-sample programs by calling
+#'   \link{score_within_samples}. See \link{scrabble::score} for more details about how to
+#'   score cells while controling for differences in cell complexities.
+#'   \item For each sample compute the standard deviation of scores for each within-sample
+#'   program by calling \link{compute_programs_sd}.
+#'   \item
+#' }
+#' \cr
+#'
+#' @return
+#'
+#' @seealso
+#'
+#' @author Avishay Spitzer
+#'
 #' @export
-scandal_programs_of_intra_sample_heterogenity <- function(object, samples = NULL, clustering_data = NULL,
-                                                          algorithm = "nmf", rank = 10, ngenes1 = 50, ngenes2 = 30, sd_threshold = 0.8, filter_method = "relative",
-                                                          bin_control = TRUE, n_control_bins = 25, n_bin_genes = 100, verbose = FALSE, ...) {
+scandal_programs_of_intra_sample_heterogeneity <- function(object, samples = NULL, clustering_data = NULL,
+                                                           algorithm = "nmf", rank = 10, ngenes1 = 50, ngenes2 = 30, sd_threshold = 0.8, filter_method = "relative",
+                                                           bin_control = TRUE, n_control_bins = 25, n_bin_genes = 100, return_all = FALSE, verbose = FALSE, ...) {
 
   if (is.null(samples))
     samples <- prepare_samples(object = object, verbose = verbose)
@@ -82,7 +137,10 @@ scandal_programs_of_intra_sample_heterogenity <- function(object, samples = NULL
   return (scandal_results)
 }
 
+#' @author Avishay Spitzer
+#'
 #' @importFrom stats setNames
+#'
 #' @export
 prepare_samples <- function(object, verbose = FALSE) {
 
@@ -98,7 +156,10 @@ prepare_samples <- function(object, verbose = FALSE) {
   return (samples)
 }
 
+#' @author Avishay Spitzer
+#'
 #' @importFrom NMF nmf
+#'
 #' @export
 nmf_run <- function(samples, rank = 10, verbose = FALSE, ...) {
 
@@ -115,7 +176,7 @@ nmf_run <- function(samples, rank = 10, verbose = FALSE, ...) {
     if (isTRUE(verbose))
       message("Running NMF for ", sname)
 
-    nmf_res <- nmf(x = m, rank = rank)
+    nmf_res <- nmf(x = m, rank = rank, ...)
 
     if (isTRUE(verbose))
       message("Done - ", nmf_res@runtime[3], "s")
@@ -131,7 +192,10 @@ nmf_run <- function(samples, rank = 10, verbose = FALSE, ...) {
   return (res)
 }
 
+#' @author Avishay Spitzer
+#'
 #' @importFrom stats setNames
+#'
 #' @export
 nmf_extract_programs <- function(nmf_data, n = 50, verbose = FALSE) {
 
@@ -145,7 +209,10 @@ nmf_extract_programs <- function(nmf_data, n = 50, verbose = FALSE) {
   return (programs)
 }
 
+#' @author Avishay Spitzer
+#'
 #' @importFrom scrabble score
+#'
 #' @export
 score_within_samples <- function(samples, ws_programs, bin_control = TRUE, n_control_bins = 25, n_bin_genes = 100, ..., verbose = FALSE) {
 
@@ -162,7 +229,7 @@ score_within_samples <- function(samples, ws_programs, bin_control = TRUE, n_con
 
     m <- center_matrix(as.matrix(assay(sdata)), by = "row", method = "mean", scale = FALSE)
 
-    scores <- score(mat = m, groups = programs, bin.control = bin_control, nbin = n_control_bins, n = n_bin_genes, binmat = as.matrix(assay(sdata)), ...)
+    scores <- score(mat = m, groups = programs, center = FALSE, bin.control = bin_control, nbin = n_control_bins, n = n_bin_genes, binmat = as.matrix(assay(sdata)), ...)
 
     res[[sname]] <- scores
   }
@@ -170,7 +237,10 @@ score_within_samples <- function(samples, ws_programs, bin_control = TRUE, n_con
   return (res)
 }
 
+#' @author Avishay Spitzer
+#'
 #' @importFrom matrixStats colSds
+#'
 #' @export
 compute_programs_sd <- function(ws_scores, verbose = FALSE) {
 
@@ -189,6 +259,8 @@ compute_programs_sd <- function(ws_scores, verbose = FALSE) {
   return (res)
 }
 
+#' @author Avishay Spitzer
+#'
 #' @export
 within_sample_variable_programs <- function(ws_score_sd, ws_programs, sd_threshold, filter_method = "relative", verbose = FALSE) {
 
@@ -207,7 +279,10 @@ within_sample_variable_programs <- function(ws_score_sd, ws_programs, sd_thresho
   return (ws_programs)
 }
 
+#' @author Avishay Spitzer
+#'
 #' @importFrom scrabble score
+#'
 #' @export
 score_between_samples <- function(x, programs, bin_control = TRUE, n_control_bins = 25, n_bin_genes = 100, ..., verbose = FALSE) {
 
@@ -218,31 +293,23 @@ score_between_samples <- function(x, programs, bin_control = TRUE, n_control_bin
 
   centered_data <- center_matrix(x, by = "row", method = "mean", scale = FALSE)
 
-  scores <- score(mat = centered_data, groups = programs, bin.control = bin_control, nbin = n_control_bins, n = n_bin_genes, binmat = x)
+  scores <- score(mat = centered_data, groups = programs, center = FALSE, bin.control = bin_control, nbin = n_control_bins, n = n_bin_genes, binmat = x)
 
   return (scores)
 }
 
-#' @importFrom stats cor
+#' @author Avishay Spitzer
+#'
 #' @importFrom ConsensusClusterPlus ConsensusClusterPlus calcICL
+#'
 #' @export
 cluster_variable_programs <- function(bs_scores, rank = 10, verbose = FALSE) {
 
   if (isTRUE(verbose))
     message("Computing program clusters")
 
-  prog_cor <- cor(bs_scores, use = "all.obs", method = "pearson")
-
-  ccp <- ConsensusClusterPlus(as.dist(1 - prog_cor), maxK = rank, pItem = 1, pFeature = 1)
+  ccp <- ConsensusClusterPlus(bs_scores, maxK = rank, pItem = 1, pFeature = 1, clusterAlg = "hc", distance = "pearson")
   icl <- calcICL(ccp)
-
-  # mean_cc <- setNames(rep(0, length(2:rank)), as.character(2:rank))
-  # for (k in 2:rank) {
-  #   k_cc <- icl$clusterConsensus[icl$clusterConsensus[, "k"] == k, ]
-  #   mean_cc[as.character(k)] <- mean(k_cc[, "clusterConsensus"], na.rm = TRUE)
-  # }
-
-  # best_cc <- as.numeric(names(which.max(mean_cc)))
 
   sum_ic <- setNames(rep(0, length(2:rank)), as.character(2:rank))
   for (k in 2:rank) {
@@ -261,6 +328,8 @@ cluster_variable_programs <- function(bs_scores, rank = 10, verbose = FALSE) {
   return (ccp[[best_cc]])
 }
 
+#' @author Avishay Spitzer
+#'
 #' @export
 nmf_score_genes <- function(nmf_data, variable_programs, program_clusters, verbose = FALSE) {
 
@@ -268,12 +337,10 @@ nmf_score_genes <- function(nmf_data, variable_programs, program_clusters, verbo
     message("Scoring genes within each program cluster")
 
   cc <- program_clusters$consensusClass
-  #co <- program_clusters$consensusTree$order
 
   genes <- list()
   for (i in unique(cc)) {
     pnames <- names(cc[which(cc == i)])
-    #genes[[paste0("P", i)]] <- unique(unlist(unlist(variable_programs, recursive = FALSE)[pnames]))
     genes[[paste0("P", i)]] <- unique(unlist(variable_programs[pnames], recursive = FALSE))
   }
 
@@ -284,7 +351,6 @@ nmf_score_genes <- function(nmf_data, variable_programs, program_clusters, verbo
     sample <- gsub("\\..*", "", cname)
     pname <- gsub(".*\\.", "", cname)
 
-    #p <- variable_programs[[sample]][[pname]]
     p <- variable_programs[[cname]]
 
     W <- .W(nmf_data[[sample]])[p, pname]
@@ -310,6 +376,8 @@ nmf_score_genes <- function(nmf_data, variable_programs, program_clusters, verbo
   return (nmf_scores)
 }
 
+#' @author Avishay Spitzer
+#'
 #' @export
 metaprograms <- function(gene_scores, n_sig_genes = 30, verbose = FALSE) {
 
@@ -321,9 +389,11 @@ metaprograms <- function(gene_scores, n_sig_genes = 30, verbose = FALSE) {
     metaprograms[[mpname]] <- head(names(sort(gene_scores[, mpname], decreasing = TRUE)), n = n_sig_genes)
   }
 
-  return (as.data.frame(metaprograms))
+  return (as.data.frame(metaprograms, stringsAsFactors = FALSE))
 }
 
+#' @author Avishay Spitzer
+#'
 #' @export
 assign_metaprograms <- function(metaprogram_scores, verbose = FALSE) {
 
@@ -344,11 +414,14 @@ assign_metaprograms <- function(metaprogram_scores, verbose = FALSE) {
 ### -------------------------------------------------------------------------
 ###
 
+#' @author Avishay Spitzer
+#'
 #' @importFrom reshape2 melt
+#'
 #' @export
-scandal_programs_sd_plot <- function(results, sd_threshold = 0.5, title = NULL) {
+scandal_programs_sd_plot <- function(ws_score_sd, sd_threshold = 0.5, title = NULL) {
 
-  df <- as.data.frame(results$wsScoreSDs)
+  df <- as.data.frame(ws_score_sd)
 
   p <- ggplot(melt(df), aes(x = variable, y = value, fill = variable)) +
         geom_boxplot() +
@@ -362,20 +435,24 @@ scandal_programs_sd_plot <- function(results, sd_threshold = 0.5, title = NULL) 
   return (p)
 }
 
+#' @author Avishay Spitzer
+#'
+#' @importFrom stats cor
 #' @importFrom scales hue_pal
+#'
 #' @export
-scandal_programs_consensus_plot <- function(results) {
+scandal_program_clusters_plot <- function(bs_scores, program_clusters) {
 
-  bsScores <- results$bsScores
+  prog_cor <- cor(bs_scores, use = "all.obs", method = "pearson")
 
-  prog_cor <- cor(bsScores, use = "all.obs", method = "pearson")
+  cc <- program_clusters$consensusClass
+  co <- program_clusters$consensusTree$order
 
-  cp <- results$consensusPrograms
-
-  p <- Heatmap(prog_cor[cp$co, cp$co], col = colorRamp2(c(-1, 0, 1), c("dodgerblue", "white", "red")), cluster_columns = FALSE, cluster_rows = FALSE, show_column_names = TRUE, show_row_names = TRUE,
-               heatmap_legend_param = list(title = "Score", at = c(-1, 0, 1)),
-               top_annotation = HeatmapAnnotation("CC" = as.character(cp$cc)[cp$co], show_annotation_name = FALSE,
-                                                  col = list("CC" = setNames(hue_pal()(n = length(unique(cp$cc))), unique((cp$cc))))))
+  p <- Heatmap(prog_cor[co, co], col = colorRamp2(c(-1, 0, 1), c("dodgerblue", "white", "red")), cluster_columns = FALSE, cluster_rows = FALSE,
+               show_column_names = TRUE, show_row_names = TRUE,
+               heatmap_legend_param = list(title = "Score", at = c(-1, -0.5, 0, 0.5, 1)),
+               top_annotation = HeatmapAnnotation("PC" = as.character(cc)[co], show_annotation_name = FALSE,
+                                                  col = list("PC" = setNames(hue_pal()(n = length(unique(cc))), unique((cc))))))
 
   return (p)
 }

@@ -100,6 +100,50 @@ compute_louvain_clusters <- function(data, k) {
   return (clusters)
 }
 
+#'
+#' @title Compute cluster markers density
+#'
+#' @description This function computes the expression density of a set of marker genes
+#' for each cluster. The expression density is defined as the mean expression of the
+#' markers gene set accross all cells belonging to the same cluster.
+#'
+#' @param x gene expression matrix
+#' @param clusters a character/factor vector of cluster assigment for each observation (column)
+#' in \code{x}
+#' @param markers a character vector of marker gene symbols corresponding to subset of genes (rows)
+#' in \code{x}
+#' @param return_sorted wether the result should be returned in descending order. Defaule is FALSE
+#'
+#' @return A \lnik{tibble} with two columns: Cluster and MCD (Markers Cluster Density).
+#'
+#' @author Avishay Spitzer
+#'
+#' @importFrom tibble tibble
+#' @importFrom dplyr %>% group_by summarise arrange desc
+#'
+#' @export
+scandal_cluster_markers_density <- function(x, clusters, markers, return_sorted = FALSE) {
+
+  stopifnot(is_valid_assay(x))
+
+  markers <- markers[markers %in% rownames(x)]
+
+  x <- center_matrix(as.matrix(x[markers, ]), by = "row", method = "mean", scale = FALSE)
+
+  markers_mean <- apply(x, 2, mean)
+
+  tbl <- tibble(Cluster = clusters, Mmean = markers_mean)
+
+  tbl <- tbl %>%
+            group_by(Cluster) %>%
+            summarise (MCD = mean(Mmean))
+
+  if (isTRUE(return_sorted))
+    tbl <- tbl %>% arrange(desc(MCD))
+
+  return (tbl)
+}
+
 .is_option_requested <- function(opts_vec, opt) (opt %in% names(opts_vec)) && (isTRUE(opts_vec[opt]))
 
 .compute_cor <- function(x, cor_method) {

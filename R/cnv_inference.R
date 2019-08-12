@@ -383,9 +383,14 @@ scandal_cnv_classify_cells <- function(cnv_scores, clusters, cnv_matrix = NULL, 
         }))
       }
 
-      malignant[(int_scores %>% filter(CNVCorOwn > 2*CNVCorOth))$CellID] <- "MbCA"
+      malignant[(int_scores %>% filter(CNVCorOwn > 2*CNVCorOth))$CellID] <- "MbCC"
       malignant[(int_scores %>% filter(CNVCorOwn <= 2*CNVCorOth))$CellID] <- "Unresolved"
     }
+
+    data$Classification <- malignant
+
+    malignant[malignant == "MbCC"] <- "Malignant"
+    malignant[!(malignant %in% c("Malignant", "Nonmalignant"))] <- "Unresolved"
 
     data$Malignant <- malignant
   }
@@ -397,19 +402,29 @@ scandal_cnv_classify_cells <- function(cnv_scores, clusters, cnv_matrix = NULL, 
 }
 
 #' @export
-scandal_cnv_scores_plot <- function(cnv_scores, signal_threshold = 0.05, correlation_threshold = 0.5, title = NULL, verbose = FALSE) {
+scandal_cnv_get_malignant_cells <- function(cnv_scores) {
 
-  cnv_scores <- scandal_cnv_classify_scores(cnv_scores, signal_threshold = signal_threshold, correlation_threshold = correlation_threshold)
+  res <- (cnv_scores %>%
+            select(CellID, Malignant) %>%
+            filter(Malignant == "Malignant"))$CellID
 
-  cnv_detected <- cnv_scores$CNVDetected
+  return (res)
+}
 
-  non_classifiable <- (length(which(cnv_detected == "Low signal" | cnv_detected == "Low correlation")) / length(cnv_detected)) * 100
+#' @export
+scandal_cnv_scores_plot <- function(cnv_scores, signal_threshold = 0.05, correlation_threshold = 0.5, title = NULL, labels = NULL, name = NULL, verbose = FALSE) {
 
-  p <- scandal_scatter_plot(x = cnv_scores$Correlation, y = cnv_scores$Signal, labels = cnv_detected, color_legend_name = "CNV\ndetected",
+  #cnv_scores <- scandal_cnv_classify_scores(cnv_scores, signal_threshold = signal_threshold, correlation_threshold = correlation_threshold)
+
+  #cnv_detected <- cnv_scores$CNVDetected
+
+  #non_classifiable <- (length(which(cnv_detected == "Low signal" | cnv_detected == "Low correlation")) / length(cnv_detected)) * 100
+
+  p <- scandal_scatter_plot(x = cnv_scores$Correlation, y = cnv_scores$Signal, labels = labels, color_legend_name = name,
                             title = title, xlab = "CNV Correlation", ylab = "CNV Signal", plot_ordered = FALSE) +
         geom_vline(xintercept = correlation_threshold) +
-        geom_hline(yintercept = signal_threshold)  +
-    labs(caption = sprintf("%.2f%% of cells are non-classifiable", non_classifiable))
+        geom_hline(yintercept = signal_threshold) #+
+    #labs(caption = sprintf("%.2f%% of cells are non-classifiable", non_classifiable))
 
   return (p)
 }

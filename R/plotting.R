@@ -383,6 +383,9 @@ scandal_tsne_plot <- function(object, tsne_labels = NULL, legend_name = NULL, ti
   if (is.null(tsne_data))
     stop("t-SNE data not found")
 
+  if (is.character(tsne_labels))
+    tsne_labels <- as.factor(tsne_labels)
+
   p <- scandal_scatter_plot(x = tsne_data[, 1],
                             y = tsne_data[, 2],
                             labels = tsne_labels,
@@ -429,6 +432,9 @@ scandal_umap_plot <- function(object, umap_labels = NULL, legend_name = NULL, ti
   if (is.null(umap_data))
     stop("UMAP data not found")
 
+  if (is.character(umap_labels))
+    umap_labels <- as.factor(umap_labels)
+
   p <- scandal_scatter_plot(x = umap_data[, 1],
                             y = umap_data[, 2],
                             labels = umap_labels,
@@ -438,6 +444,33 @@ scandal_umap_plot <- function(object, umap_labels = NULL, legend_name = NULL, ti
                             ylab = "UMAP dim2",
                             plot_ordered = FALSE,
                             title_text_size = title_text_size)
+
+  return (p)
+}
+
+#' @export
+scandal_markers_plot <- function(object, markers, title = NULL, markers_caption = TRUE, data_type = "tsne",
+                                 name = "Expression", low = "dodgerblue", mid = "grey", high = "red", midpoint = 0, oob = squish, limits = c(-2, 2),
+                                 title_text_size = size, caption_text_size = NULL) {
+
+  stopifnot(is_scandal_object(object))
+  stopifnot(!is.null(markers), is.character(markers), is.vector(markers))
+  stopifnot(!is.null(data_type), is.character(data_type), data_type %in% c("tsne", "umap"))
+
+  marker_genes <- rownames(object)[rownames(object) %in% markers]
+  x <- center_matrix(assay(object)[marker_genes, ], by = "row", method = "mean", scale = FALSE)
+  mean_exp <- colMeans(x)
+
+  data <- reducedDim(object, data_type)
+
+  df <- data.frame(x = data[, 1], y = data[, 2], color = mean_exp)
+  p <- ggplot(df, aes(x = x, y = y, color = color)) +
+    geom_point() +
+    scale_color_gradient2(name = name, low = low, mid = mid, high = high, midpoint = midpoint, oob = oob, limits = limits) +
+    labs(x = paste0(ifelse(data_type == "tsne", "t-SNE", "UMAP"), " dim1"), y = paste0(ifelse(data_type == "tsne", "t-SNE", "UMAP"), " dim2"),
+         title = title, caption = ifelse(isTRUE(markers_caption), paste0("Markers: ", paste0(markers, collapse =  ", ")), NULL)) +
+    theme_classic() +
+    theme(plot.title = element_text(hjust = 0.5, size = 20), plot.caption = element_text(hjust = 0, size = caption_text_size))
 
   return (p)
 }
