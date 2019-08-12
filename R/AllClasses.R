@@ -829,3 +829,32 @@ DEFAULT_CELL_2_NODE_MAP <- function(cell_ids) {
 ### ScandalDataSet objects (end)
 ### =========================================================================
 ###
+
+### =========================================================================
+### ScandalResults objects (start)
+### -------------------------------------------------------------------------
+###
+
+#' @export
+#' @exportClass ScandalResults
+setClass("ScandalResults",
+         slots = c(samples = "SimpleList", # List of ScandalDataSet objects
+                   wsClusteringData = "SimpleList", # List of within-sample clustering data (e.g. NMF objects)
+                   wsPrograms = "SimpleList", # List of lists representing within-sample programs (vectors of gene symbols)
+                   wsScores = "SimpleList", # List of matrices representing the program scores within each sample
+                   wsScoreSDs = "SimpleList", # List of vectors representing the standard deviation of program scores within each sample
+                   bsScores = "matrix",
+                   variablePrograms = "SimpleList",
+                   programClusters = "SimpleList",
+                   geneScores = "matrix",
+                   mpScores = "SimpleList",
+                   thresholdSD = "numeric", # Minimal SD below which programs are filtered out
+                   nodeID = "character",
+                   projectID = "character"),
+         contains = "DataFrame"
+)
+
+### -------------------------------------------------------------------------
+### ScandalResults objects (end)
+### =========================================================================
+###

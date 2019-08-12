@@ -37,7 +37,11 @@ Imports:
     ComplexHeatmap,
     circlize,
     grid,
-    MASS
+    MASS,
+    NMF,
+    matrixStats,
+    ConsensusClusterPlus,
+    scrabble
 Depends:
     SummarizedExperiment,
     SingleCellExperiment
@@ -50,4 +54,5 @@ Collate:
     'gene_sets.R'
     'plotting.R'
     'preprocess.R'
+    'programs.R'
     'scandal.R'

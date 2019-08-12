@@ -61,7 +61,7 @@
 #' @author Avishay Spitzer
 #'
 #' @export
-scandal_infer_cnv <- function(object, gene_positions_table, reference_cells,
+scandal_cnv_infer <- function(object, gene_positions_table, reference_cells,
                               max_genes = 5000, expression_limits = c(-3, 3), window = 100, scaling_factor = 0.2,
                               initial_centering = "col", base_metric = "median",
                               verbose = FALSE) {
@@ -80,7 +80,7 @@ scandal_infer_cnv <- function(object, gene_positions_table, reference_cells,
 
   x <- as.matrix(unprocessedData(object))[, colnames(object)]
 
-  cnv_matrix <- scandal_compute_cnv_matrix(x = x,
+  cnv_matrix <- scandal_cnv_compute_matrix(x = x,
                                            gene_positions_table = gene_positions_table,
                                            reference_cells = reference_cells,
                                            max_genes = max_genes,
@@ -122,7 +122,7 @@ scandal_infer_cnv <- function(object, gene_positions_table, reference_cells,
 #' @author Avishay Spitzer
 #'
 #' @export
-scandal_compute_cnv_matrix <- function(x, gene_positions_table, reference_cells,
+scandal_cnv_compute_matrix <- function(x, gene_positions_table, reference_cells,
                                        max_genes = 5000, expression_limits = c(-3, 3), window = 100, scaling_factor = 0.2,
                                        initial_centering = "col", base_metric = "median",
                                        verbose = FALSE) {
@@ -243,7 +243,7 @@ scandal_cnv_plot <- function(object, cnv_matrix = NULL, gene_positions_table, re
 #'
 #' @importFrom stats cor quantile
 #' @export
-scandal_compute_cnv_scores <- function(object, cnv_matrix = NULL, gene_positions_table, hotspot_threshold = .9, verbose = FALSE) {
+scandal_cnv_compute_scores <- function(object, cnv_matrix = NULL, gene_positions_table, hotspot_threshold = .9, verbose = FALSE) {
 
   if (!is.null(object))
     cnv_matrix <- reducedDim(object, "cnv")
@@ -277,7 +277,7 @@ scandal_compute_cnv_scores <- function(object, cnv_matrix = NULL, gene_positions
 }
 
 #' @export
-scandal_classify_cnv_scores <- function(cnv_scores, signal_threshold = 0.05, correlation_threshold = 0.05, verbose = FALSE) {
+scandal_cnv_classify_scores <- function(cnv_scores, signal_threshold = 0.05, correlation_threshold = 0.05, verbose = FALSE) {
 
   cnv_detected <- rep("Non-classifiable", nrow(cnv_scores))
 
@@ -295,7 +295,7 @@ scandal_classify_cnv_scores <- function(cnv_scores, signal_threshold = 0.05, cor
 #' @importFrom tibble as_tibble
 #' @importFrom stats setNames
 #' @export
-scandal_classify_cells <- function(cnv_scores, clusters, cnv_matrix = NULL, min_cluster_cnv_freq = .5, return_all = FALSE, verbose = FALSE) {
+scandal_cnv_classify_cells <- function(cnv_scores, clusters, cnv_matrix = NULL, min_cluster_cnv_freq = .5, return_all = FALSE, verbose = FALSE) {
 
   data <- cnv_scores
 
@@ -399,7 +399,7 @@ scandal_classify_cells <- function(cnv_scores, clusters, cnv_matrix = NULL, min_
 #' @export
 scandal_cnv_scores_plot <- function(cnv_scores, signal_threshold = 0.05, correlation_threshold = 0.5, title = NULL, verbose = FALSE) {
 
-  cnv_scores <- scandal_classify_cnv_scores(cnv_scores, signal_threshold = signal_threshold, correlation_threshold = correlation_threshold)
+  cnv_scores <- scandal_cnv_classify_scores(cnv_scores, signal_threshold = signal_threshold, correlation_threshold = correlation_threshold)
 
   cnv_detected <- cnv_scores$CNVDetected
 
