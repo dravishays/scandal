@@ -190,11 +190,7 @@ scandal_cnv_plot <- function(object, cnv_matrix = NULL, gene_positions_table, re
 
   plot_name <- paste0("cnv", sample(1:10^9, 1))
 
-  h <- Heatmap(cnv_matrix[cell_ids, ], name = plot_name,
-               col = colorRamp2(c(-1, 0, 1), c(low, mid, high)),
-               show_row_names = FALSE, show_column_names = FALSE, cluster_columns = FALSE, cluster_rows = cluster_rows,
-               heatmap_legend_param = list(at = c(-1, -0.5, 0, 0.5, 1), title = "Inferred CNV\n(log2 ratio)"), ...)
-
+  ra <- NULL
   if (!is.null(row_annotation)) {
     rann <- as.data.frame(row_annotation)[cell_ids, ]
 
@@ -202,13 +198,16 @@ scandal_cnv_plot <- function(object, cnv_matrix = NULL, gene_positions_table, re
       ra <- rowAnnotation(df = rann, show_annotation_name = FALSE)
     else
       ra <- rowAnnotation(df = rann, col = row_annotation_cols, show_annotation_name = FALSE)
+  }
 
-    p <- ra + h
-  } else
-    p <- h
+  h <- Heatmap(cnv_matrix[cell_ids, ], name = plot_name,
+               col = colorRamp2(c(-1, 0, 1), c(low, mid, high)),
+               show_row_names = FALSE, show_column_names = FALSE, cluster_columns = FALSE, cluster_rows = cluster_rows,
+               left_annotation = ra,
+               heatmap_legend_param = list(at = c(-1, -0.5, 0, 0.5, 1), title = "Inferred CNV\n(log2 ratio)"), ...)
 
   if (isTRUE(show_plot)) {
-    draw(p)
+    draw(h)
 
     decorate_heatmap_body(plot_name, .draw_grid(cnv_matrix, gene_positions_table))
   }
@@ -221,12 +220,12 @@ scandal_cnv_plot <- function(object, cnv_matrix = NULL, gene_positions_table, re
     file <- paste0(dirname, "/", filename)
 
     jpeg(filename = file, width = width, height = height, quality = quality)
-    draw(p)
+    draw(h)
     decorate_heatmap_body(plot_name, .draw_grid(cnv_matrix, gene_positions_table))
     dev.off()
   }
 
-  invisible(p)
+  invisible(h)
 }
 
 ### =========================================================================
@@ -241,9 +240,28 @@ scandal_cnv_plot <- function(object, cnv_matrix = NULL, gene_positions_table, re
 #' signal (the sum of squares of computed CNVs) and CNV correlation (the pearson's
 #' correlation between the cell CNV profile and the tumor's CNV profile).
 #'
+#' @param object
+#' @param cnv_matrix
+#' @param gene_positions_table
+#' @param hotspot_threshold
+#' @param verbose
+#'
+#' @return A \link{tibble} with three columns:
+#' \enumerate{
+#'   \item CellID
+#'   \item Signal
+#'   \item Correlation
+#' }
+#'
+#' @author Avishay Spitzer
+#'
 #' @importFrom stats cor quantile
+#' @importFrom tibble tibble
 #' @export
 scandal_cnv_compute_scores <- function(object, cnv_matrix = NULL, gene_positions_table, hotspot_threshold = .9, verbose = FALSE) {
+
+  stopifnot(!(is.null(object) & is.null(cnv_matrix)))
+  stopifnot(is.null(object) | is_scandal_object(object))
 
   if (!is.null(object))
     cnv_matrix <- reducedDim(object, "cnv")
@@ -271,11 +289,27 @@ scandal_cnv_compute_scores <- function(object, cnv_matrix = NULL, gene_positions
   cnv_correlation <- apply(cnv_matrix, 2, cor, y = tumor_cnv0, method = "pearson")
 
   # Return the result as a data frame with two variables
-  res <- data.frame(Signal = cnv_signal, Correlation = cnv_correlation, row.names = colnames(cnv_matrix), stringsAsFactors = FALSE)
+  res <- tibble(CellID = colnames(cnv_matrix), Signal = cnv_signal, Correlation = cnv_correlation)
 
   return (res)
 }
 
+#'
+#' @title Classify CNV scores
+#'
+#' @description This function classifies the CNV scores according to the supplied signal and correlation thresholds.
+#'
+#' @param cnv_scores
+#' @param signal_threshold
+#' @param correlation_threshold
+#' @param verbose
+#'
+#' @return
+#'
+#' @seealso \link{scandal_cnv_compute_scores}
+#'
+#' @author Avishay Spitzer
+#'
 #' @export
 scandal_cnv_classify_scores <- function(cnv_scores, signal_threshold = 0.05, correlation_threshold = 0.05, verbose = FALSE) {
 
@@ -291,109 +325,22 @@ scandal_cnv_classify_scores <- function(cnv_scores, signal_threshold = 0.05, cor
   return (cnv_scores)
 }
 
-#' @importFrom dplyr %>% group_by summarise n mutate filter select
-#' @importFrom tibble as_tibble
+#' @importFrom dplyr %>% group_by summarise n mutate filter select pull left_join
+#' @importFrom tibble tibble
 #' @importFrom stats setNames
 #' @export
-scandal_cnv_classify_cells <- function(cnv_scores, clusters, cnv_matrix = NULL, min_cluster_cnv_freq = .5, return_all = FALSE, verbose = FALSE) {
-
-  data <- cnv_scores
-
-  malignant <- setNames(rep("Unresolved", nrow(cnv_scores)), nm = rownames(cnv_scores))
+scandal_cnv_classify_cells <- function(cnv_scores, clusters, cnv_matrix = NULL, cell_class_init = NULL, min_cluster_cc_freq = .5, return_all = FALSE, verbose = FALSE) {
 
   # Simple classification - leaving the low signal and low correlation cells as "Unresolved"
-  if (is.null(clusters)) {
-
-    malignant[cnv_scores$CNVDetected == "Detected"] <- "Malignant"
-    malignant[cnv_scores$CNVDetected == "Not detected"] <- "Nonmalignant"
-
-    data$Malignant <- malignant
-
-  } else {
-    # Complex classifiaction
-
-    data$Cluster <- clusters[rownames(data)]
-
-    if (isTRUE(verbose))
-      message("Computing CNV frequency per cluster")
-
-    cnv_freq_per_cluster <- data %>%
-      group_by(Cluster, CNVDetected) %>%
-      summarise (n = n()) %>%
-      mutate(Freq = n / sum(n))
-
-    malignant_clusters <- filter(cnv_freq_per_cluster, CNVDetected == "Detected", Freq >= min_cluster_cnv_freq)
-
-    if (isTRUE(verbose))
-      message("Malignant clusters: ", malignant_clusters)
-
-    nonmalignant_clusters <- filter(cnv_freq_per_cluster, CNVDetected == "Not detected", Freq >= min_cluster_cnv_freq)
-
-    if (isTRUE(verbose))
-      message("Nonmalignant clusters: ", nonmalignant_clusters)
-
-    data <- as_tibble(data, rownames = "CellID")
-
-    malignant[data$Cluster %in% malignant_clusters$Cluster] <- "Malignant"
-    malignant[data$Cluster %in% nonmalignant_clusters$Cluster] <- "Nonmalignant"
-
-    nrm_in_mal <- data %>%
-      group_by(Cluster) %>%
-      select(CellID, Cluster, CNVDetected) %>%
-      filter(CNVDetected == "Not detected", Cluster %in% malignant_clusters$Cluster)
-
-    mal_in_nrm <- data %>%
-      group_by(Cluster) %>%
-      select(CellID, Cluster, CNVDetected) %>%
-      filter(CNVDetected == "Detected", Cluster %in% nonmalignant_clusters$Cluster)
-
-    if (nrow(nrm_in_mal) > 0)
-      malignant[nrm_in_mal$CellID] <- "NiMC"
-
-    if (nrow(mal_in_nrm) > 0)
-      malignant[mal_in_nrm$CellID] <- "MiNC"
-
-    # Classify the low signal and low correlation scores
-    if (!is.null(cnv_matrix)) {
-
-      int_scores <- data %>%
-        group_by(Cluster) %>%
-        select(CellID, Cluster, CNVDetected) %>%
-        filter(CNVDetected == "Low signal" | CNVDetected == "Low correlation", Cluster %in% malignant_clusters$Cluster)
-
-      cnv_matrix <- t(cnv_matrix)
-
-      int_scores$CNVCorOwn <- rep(0, nrow(int_scores))
-      int_scores$CNVCorOth <- rep(0, nrow(int_scores))
-
-      for (i in seq_len(nrow(int_scores))) {
-        score_i <- int_scores[i, ]
-
-        cnv_i <- cnv_matrix[, score_i$CellID]
-        cnv_c <- cnv_matrix[, (data %>% filter(Cluster == data$Cluster))$CellID]
-
-        cnv_c <- rowMeans(cnv_c)
-
-        int_scores$CNVCorOwn[i] <- cor(cnv_i, cnv_c)
-
-        int_scores$CNVCorOth[i] <- max(sapply(nonmalignant_clusters$Cluster, function(x) {
-          cnv_x <- cnv_matrix[, (data %>% filter(x == data$Cluster))$CellID]
-          cnv_x <- rowMeans(cnv_x)
-          cor(cnv_i, cnv_x)
-        }))
-      }
-
-      malignant[(int_scores %>% filter(CNVCorOwn > 2*CNVCorOth))$CellID] <- "MbCC"
-      malignant[(int_scores %>% filter(CNVCorOwn <= 2*CNVCorOth))$CellID] <- "Unresolved"
-    }
-
-    data$Classification <- malignant
-
-    malignant[malignant == "MbCC"] <- "Malignant"
-    malignant[!(malignant %in% c("Malignant", "Nonmalignant"))] <- "Unresolved"
-
-    data$Malignant <- malignant
-  }
+  if (is.null(clusters))
+    data <- .classify_cells_simple(data = cnv_scores)
+  else # Complex classifiaction using cluster correlation
+    data <- .classify_cells_cluster_correlation(data = cnv_scores,
+                                                clusters = clusters,
+                                                cnv_matrix = cnv_matrix,
+                                                cell_class_init = cell_class_init,
+                                                min_cluster_cc_freq = min_cluster_cc_freq,
+                                                verbose = verbose)
 
   if (isTRUE(return_all))
     return (data)
@@ -692,4 +639,189 @@ CHRs <- c("chr1", "chr2", "chr3", "chr4", "chr5", "chr6", "chr7", "chr8", "chr9"
   grid.lines(x = c(0, 1), c(1, 1), gp = gpar(lty = 1, lwd = 1))
   grid.lines(x = c(0, 0), c(0, 1), gp = gpar(lty = 1, lwd = 1))
   grid.lines(x = c(1, 1), c(0, 1), gp = gpar(lty = 1, lwd = 1))
+}
+
+.classify_cells_simple <- function(data) {
+
+  malignant <- setNames(rep("Unresolved", nrow(data)), nm = rownames(data))
+
+  malignant[data$CNVDetected == "Detected"] <- "Malignant"
+  malignant[data$CNVDetected == "Not detected"] <- "Nonmalignant"
+
+  data$Malignant <- malignant
+
+  return (data)
+}
+
+.classify_cells_cluster_correlation <- function(data, clusters, cnv_matrix, cell_class_init, min_cluster_cc_freq, verbose) {
+
+  data$Cluster <- clusters[data$CellID]
+
+  if (is.null(cell_class_init)) {
+
+    if (isTRUE(verbose))
+      message("Initializing cell Classification")
+
+    data <- .init_cell_class(data)
+  } else {
+
+    if (isTRUE(verbose))
+      message("Skipped cell classification initialization as it was supplied")
+
+    data$CellClass <- cell_class_init
+  }
+
+  if (isTRUE(verbose))
+    message("Classifying clusters")
+
+  data <- .classify_clusters(data, min_cluster_cc_freq)
+
+  if (isTRUE(verbose))
+    message("Classifying NiMC (Normal in Malignant Cluster)")
+
+  data <- .classify_nimc(data)
+
+  if (isTRUE(verbose))
+    message("Classifying MiNC (Malignant in Normal Cluster)")
+
+  data <- .classify_minc(data)
+
+  # Classify the low signal and low correlation scores
+  if (!is.null(cnv_matrix)) {
+
+    if (isTRUE(verbose))
+      message("Classifying intermediate scores (low signal/correlation)")
+
+    data <- .classify_intermediate_scores(data, cnv_matrix)
+  }
+
+  if (isTRUE(verbose))
+    message("Classifying malignant cells")
+
+  data <- .classify_cells(data)
+
+  return (data)
+}
+
+.init_cell_class <- function(data) {
+
+  cell_class <- setNames(rep("Unresolved", nrow(data)), data$CellID)
+
+  malignant_cells <- data %>% filter(CNVDetected == "Detected") %>% pull(CellID)
+
+  nonmalignant_cells <- data %>% filter(CNVDetected == "Not detected") %>% pull(CellID)
+
+  cell_class[malignant_cells] <- "Malignant"
+  cell_class[nonmalignant_cells] <- "Nonmalignant"
+
+  data$CellClass <- cell_class
+
+  return (data)
+}
+
+.classify_clusters <- function(data, min_cluster_cc_freq) {
+
+  cluster_cell_class_freq <- data %>%
+    group_by(Cluster, CellClass) %>%
+    summarise (n = n()) %>%
+    mutate(Freq = n / sum(n))
+
+  cluster_class <- setNames(rep("Unresolved", length(unique(data$Cluster))), nm = unique(data$Cluster))
+
+  malignant_clusters <- filter(cluster_cell_class_freq, CellClass == "Malignant", Freq >= min_cluster_cc_freq) %>% pull(Cluster)
+  cluster_class[malignant_clusters] <- "Malignant"
+
+  nonmalignant_clusters <- filter(cluster_cell_class_freq, CellClass == "Nonmalignant", Freq >= min_cluster_cc_freq) %>% pull(Cluster)
+  cluster_class[nonmalignant_clusters] <- "Nonmalignant"
+
+  cluster_class <- tibble(Cluster = names(cluster_class), ClusterClass = cluster_class)
+
+  data <- data %>%
+    left_join(cluster_class, by = "Cluster")
+
+  return (data)
+}
+
+.classify_nimc <- function(data) {
+
+  cell_class <- setNames(data$CellClass, data$CellID)
+
+  nrm_in_mal <- data %>%
+    filter(CellClass == "Nonmalignant" & ClusterClass == "Malignant")
+
+  if (nrow(nrm_in_mal) > 0)
+    cell_class[nrm_in_mal$CellID] <- "NiMC"
+
+  data$CellClass <- cell_class
+
+  return (data)
+}
+
+.classify_minc <- function(data) {
+
+  cell_class <- setNames(data$CellClass, data$CellID)
+
+  mal_in_nrm <- data %>%
+    filter(CellClass == "Malignant" & ClusterClass == "Nonmalignant")
+
+  if (nrow(mal_in_nrm) > 0)
+    cell_class[mal_in_nrm$CellID] <- "MiNC"
+
+  data$CellClass <- cell_class
+
+  return (data)
+}
+
+.classify_intermediate_scores <- function(data, cnv_matrix) {
+
+  cell_class <- setNames(data$CellClass, data$CellID)
+
+  int_scores <- data %>%
+    group_by(Cluster) %>%
+    select(CellID, CNVDetected, Cluster, ClusterClass, CellClass) %>%
+    filter(CNVDetected == "Low signal" | CNVDetected == "Low correlation", ClusterClass == "Malignant", CellClass == "Unresolved")
+
+  nonmalignant_clusters <- unique(data %>% filter(ClusterClass == "Nonmalignant") %>% pull(Cluster))
+
+  cnv_matrix <- t(cnv_matrix)
+
+  int_scores$CNVCorOwn <- rep(0, nrow(int_scores))
+  int_scores$CNVCorOth <- rep(0, nrow(int_scores))
+
+  for (i in seq_len(nrow(int_scores))) {
+    score_i <- int_scores[i, ]
+
+    cnv_i <- cnv_matrix[, score_i$CellID]
+    cnv_c <- cnv_matrix[, data %>% filter(Cluster == data$Cluster) %>% pull(CellID)]
+
+    cnv_c <- rowMeans(cnv_c)
+
+    int_scores$CNVCorOwn[i] <- cor(cnv_i, cnv_c)
+
+    int_scores$CNVCorOth[i] <- max(sapply(nonmalignant_clusters, function(x) {
+      cnv_x <- cnv_matrix[, data %>% filter(x == data$Cluster) %>% pull(CellID)]
+      cnv_x <- rowMeans(cnv_x)
+      cor(cnv_i, cnv_x)
+    }))
+  }
+
+  cell_class[int_scores %>% filter(CNVCorOwn > 2*CNVCorOth) %>% pull(CellID)] <- "MbCC"
+  cell_class[int_scores %>% filter(CNVCorOwn <= 2*CNVCorOth) %>% pull(CellID)] <- "Unresolved"
+
+  data$CellClass <- cell_class
+
+  return (data)
+}
+
+# Classify cells as Malignant\Nonmalignant\Unresolved
+.classify_cells <- function(data) {
+
+  malignant <- setNames(data$CellClass, data$CellID)
+
+  malignant[malignant == "MbCC"] <- "Malignant"
+  malignant[!(malignant %in% c("Malignant", "Nonmalignant"))] <- "Unresolved"
+
+  data$Malignant <- malignant
+
+  return (data)
 }

@@ -7,8 +7,22 @@
 scandal_cnv_compute_scores(object, cnv_matrix = NULL,
   gene_positions_table, hotspot_threshold = 0.9, verbose = FALSE)
 }
+\arguments{
+\item{verbose}{}
+}
+\value{
+A \link{tibble} with three columns:
+\enumerate{
+  \item CellID
+  \item Signal
+  \item Correlation
+}
+}
 \description{
 Computes the CNV score for each cell which is composed of the CNV
 signal (the sum of squares of computed CNVs) and CNV correlation (the pearson's
 correlation between the cell CNV profile and the tumor's CNV profile).
+}
+\author{
+Avishay Spitzer
 }
