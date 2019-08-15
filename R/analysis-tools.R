@@ -122,7 +122,7 @@ compute_louvain_clusters <- function(data, k) {
 #' @importFrom dplyr %>% group_by summarise arrange desc
 #'
 #' @export
-scandal_cluster_markers_density <- function(x, clusters, markers, return_sorted = FALSE) {
+scandal_cluster_markers_density <- function(x, clusters, mname, markers, return_sorted = FALSE) {
 
   stopifnot(is_valid_assay(x))
 
@@ -141,7 +141,21 @@ scandal_cluster_markers_density <- function(x, clusters, markers, return_sorted 
   if (isTRUE(return_sorted))
     tbl <- tbl %>% arrange(desc(MCD))
 
+  if (!is.null(mname))
+    colnames(tbl)[colnames(tbl) == "MCD"] <- mname
+
   return (tbl)
+}
+
+#' @importFrom tibble is_tibble
+#' @importFrom dplyr left_join
+#' @export
+`%MCD%` <- function(t1, t2) {
+  stopifnot(is_tibble(t1), is_tibble(t2))
+  stopifnot("Cluster" %in% colnames(t1), "Cluster" %in% colnames(t2))
+  stopifnot(length(t1) == length(t2))
+
+  return (left_join(t1, t2, by = "Cluster"))
 }
 
 .is_option_requested <- function(opts_vec, opt) (opt %in% names(opts_vec)) && (isTRUE(opts_vec[opt]))
