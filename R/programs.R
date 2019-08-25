@@ -62,6 +62,7 @@
 #' @export
 scandal_programs_of_intra_sample_heterogeneity <- function(object, samples = NULL, clustering_data = NULL,
                                                            algorithm = "nmf", rank = 10, ngenes1 = 50, ngenes2 = 30, sd_threshold = 0.8, filter_method = "relative",
+                                                           n_clusters_min = 2, n_clusters_max = 10,
                                                            bin_control = TRUE, n_control_bins = 25, n_bin_genes = 100, return_all = FALSE, verbose = FALSE, ...) {
 
   if (is.null(samples))
@@ -104,7 +105,7 @@ scandal_programs_of_intra_sample_heterogeneity <- function(object, samples = NUL
   bs_scores <- score_between_samples(x = assay(object), programs = variable_programs,
                                      bin_control = bin_control, n_control_bins = n_control_bins, n_bin_genes = n_bin_genes, verbose = verbose)
 
-  program_clusters <- cluster_variable_programs(bs_scores = bs_scores, rank = rank, verbose = verbose)
+  program_clusters <- cluster_variable_programs(bs_scores = bs_scores, n_clusters_min = n_clusters_min, n_clusters_max = n_clusters_max, verbose = verbose)
 
   # Plot here program correlation
 
@@ -303,16 +304,16 @@ score_between_samples <- function(x, programs, bin_control = TRUE, n_control_bin
 #' @importFrom ConsensusClusterPlus ConsensusClusterPlus calcICL
 #'
 #' @export
-cluster_variable_programs <- function(bs_scores, rank = 10, verbose = FALSE) {
+cluster_variable_programs <- function(bs_scores, n_clusters_min = 2, n_clusters_max = 10, verbose = FALSE) {
 
   if (isTRUE(verbose))
     message("Computing program clusters")
 
-  ccp <- ConsensusClusterPlus(bs_scores, maxK = rank, pItem = 1, pFeature = 1, clusterAlg = "hc", distance = "pearson")
+  ccp <- ConsensusClusterPlus(bs_scores, maxK = n_clusters_max, pItem = 1, pFeature = 1, clusterAlg = "hc", distance = "pearson")
   icl <- calcICL(ccp)
 
-  sum_ic <- setNames(rep(0, length(2:rank)), as.character(2:rank))
-  for (k in 2:rank) {
+  sum_ic <- setNames(rep(0, length(n_clusters_min:n_clusters_max)), as.character(n_clusters_min:n_clusters_max))
+  for (k in n_clusters_min:n_clusters_max) {
     k_cc <- icl$itemConsensus[icl$itemConsensus[, "k"] == k, ]
     sum_ic[as.character(k)] <- sum(k_cc[, "itemConsensus"], na.rm = TRUE)
   }
