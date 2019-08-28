@@ -153,7 +153,7 @@ scandal_cluster_markers_density <- function(x, clusters, mname, markers, return_
 `%MCD%` <- function(t1, t2) {
   stopifnot(is_tibble(t1), is_tibble(t2))
   stopifnot("Cluster" %in% colnames(t1), "Cluster" %in% colnames(t2))
-  stopifnot(length(t1) == length(t2))
+  stopifnot(nrow(t1) == nrow(t2))
 
   return (left_join(t1, t2, by = "Cluster"))
 }
