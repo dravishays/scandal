@@ -468,9 +468,12 @@ scandal_markers_plot <- function(object, markers, title = NULL, markers_caption 
     geom_point() +
     scale_color_gradient2(name = name, low = low, mid = mid, high = high, midpoint = midpoint, oob = oob, limits = limits) +
     labs(x = paste0(ifelse(data_type == "tsne", "t-SNE", "UMAP"), " dim1"), y = paste0(ifelse(data_type == "tsne", "t-SNE", "UMAP"), " dim2"),
-         title = title, caption = ifelse(isTRUE(markers_caption), paste0("Markers: ", paste0(markers, collapse =  ", ")), NULL)) +
+         title = title) +
     theme_classic() +
     theme(plot.title = element_text(hjust = 0.5, size = 20), plot.caption = element_text(hjust = 0, size = caption_text_size))
+
+  if (isTRUE(markers_caption))
+    p <- p + labs(caption = paste0("Markers: ", paste0(markers, collapse =  ", ")))
 
   return (p)
 }

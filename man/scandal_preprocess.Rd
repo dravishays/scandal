@@ -4,14 +4,11 @@
 \alias{scandal_preprocess}
 \title{Scandal object preprocessing}
 \usage{
-scandal_preprocess(object, preproc_config_list, forced_genes_set = NULL,
+scandal_preprocess(object, forced_genes_set = NULL,
   use_housekeeping_filter = FALSE, verbose = FALSE)
 }
 \arguments{
 \item{object}{a ScandalDataSet object (the underlying object).}
-
-\item{preproc_config_list}{a named list of containing a \linkS4class{PreprocConfig}
-object for each sample. The names should correspond to the sample name.}
 
 \item{forced_genes_set}{a vector of genes that should be included in the final
 processed object even if their expression is low with the exception of forced

@@ -1,14 +1,14 @@
 
 ### =========================================================================
-### CNV matrix computation and plotting
+### CNA matrix computation and plotting
 ### -------------------------------------------------------------------------
 ###
 
 #'
-#' @title CNV inference
+#' @title CNA inference
 #'
-#' @description This function infers CNVs (chromosomal copy-number variations) from the
-#' single-cell expression data. CNV inference is the main method of the scandal framework
+#' @description This function infers CNAs (chromosomal copy-number variations) from the
+#' single-cell expression data. CNA inference is the main method of the scandal framework
 #' for classifying malignant and non-malignant cells.
 #'
 #' @param object a \linkS4class{ScandalDataSet} object.
@@ -17,26 +17,26 @@
 #' contain the column names "Gene" and "CHR".
 #' @param reference_cells a named vector of the cluster assignments of the reference cells.
 #' The names should correspond to the cell IDs of the reference (non-malignant) cells. The
-#' CNV matrix can be computed without a reference (with \code{reference=NULL}) but this is
-#' not recommended as downstream comoutations using the inferred CNV matrix will be less
+#' CNA matrix can be computed without a reference (with \code{reference=NULL}) but this is
+#' not recommended as downstream comoutations using the inferred CNA matrix will be less
 #' reliable.
-#' @param max_genes maximal number of genes to use for computing the CNV matrix. Default
+#' @param max_genes maximal number of genes to use for computing the CNA matrix. Default
 #' is 5000.
 #' @param expression_limits a numeric vector with two elements representing the upper
 #' and lower values with which to bound the centered expression matrix prior to
-#' calculating the CNV matrix. This blunts the effect of noisy genes. Defaut is (-3, 3).
+#' calculating the CNA matrix. This blunts the effect of noisy genes. Defaut is (-3, 3).
 #' @param window number of genes to consider when calculating the running mean. Default
 #' is a window of 100 genes.
 #' @param scaling_factor a small constant by which to increase the calculated
 #' (-BM, +BM) interval to compensate for possible noise. Default is 0.2.
 #' @param initial_centering direction of centering the expression matrix (row-wise or
-#' col-wise) prior to computing the CNV matrix. Accepts either strings "row" or "col",
+#' col-wise) prior to computing the CNA matrix. Accepts either strings "row" or "col",
 #' default is "col".
 #' @param base_metric a metric to use for calculating the (-BM, + BM) interval. Accepts
 #' either strings "mean" or "median", default is "median".
 #' @param verbose suppresses all messages from this function. Default is FALSE.
 #'
-#' @details The CNV algorithm is as follows:\cr
+#' @details The CNA algorithm is as follows:\cr
 #' Preprocessing steps:
 #' \enumerate{
 #'   \item Compute mean expression for each gene (log2[mean(TPM) + 1])
@@ -49,11 +49,11 @@
 #' }
 #' \cr
 #'
-#' @return Returns the \linkS4class{ScandalDataSet} object with CNV matrix in the
-#' "cnv" element of the reducedDim slot (accessible by reducedDim(object, "cnv")). Note
+#' @return Returns the \linkS4class{ScandalDataSet} object with CNA matrix in the
+#' "cna" element of the reducedDim slot (accessible by reducedDim(object, "cna")). Note
 #' that the matrix is stored with cell IDs as row names and gene IDs as column names.
 #'
-#' @seealso The CNV inference method was defined and developed by **Dr. Itay Tirosh**
+#' @seealso The CNA inference method was defined and developed by **Dr. Itay Tirosh**
 #' during his time at the *Broad Institute* and published in several high-impact papers
 #' including the following paper from *Cell*:
 #' https://www.cell.com/cell/fulltext/S0092-8674(17)31270-9.
@@ -61,7 +61,7 @@
 #' @author Avishay Spitzer
 #'
 #' @export
-scandal_cnv_infer <- function(object, gene_positions_table, reference_cells,
+scandal_cna_infer <- function(object, gene_positions_table, reference_cells,
                               max_genes = 5000, expression_limits = c(-3, 3), window = 100, scaling_factor = 0.2,
                               initial_centering = "col", base_metric = "median",
                               verbose = FALSE) {
@@ -80,7 +80,7 @@ scandal_cnv_infer <- function(object, gene_positions_table, reference_cells,
 
   x <- as.matrix(unprocessedData(object))[, colnames(object)]
 
-  cnv_matrix <- scandal_cnv_compute_matrix(x = x,
+  cna_matrix <- scandal_cna_compute_matrix(x = x,
                                            gene_positions_table = gene_positions_table,
                                            reference_cells = reference_cells,
                                            max_genes = max_genes,
@@ -91,16 +91,16 @@ scandal_cnv_infer <- function(object, gene_positions_table, reference_cells,
                                            base_metric = base_metric,
                                            verbose = verbose)
 
-  if (is.null(cnv_matrix))
-    stop("An error has occured while computing the CNV matrix")
+  if (is.null(cna_matrix))
+    stop("An error has occured while computing the CNA matrix")
 
-  reducedDim(object, "cnv") <- t(cnv_matrix)
+  reducedDim(object, "cna") <- t(cna_matrix)
 
   return (object)
 }
 
 #'
-#' @title CNV matrix computation
+#' @title CNA matrix computation
 #'
 #' @description This function
 #'
@@ -122,7 +122,7 @@ scandal_cnv_infer <- function(object, gene_positions_table, reference_cells,
 #' @author Avishay Spitzer
 #'
 #' @export
-scandal_cnv_compute_matrix <- function(x, gene_positions_table, reference_cells,
+scandal_cna_compute_matrix <- function(x, gene_positions_table, reference_cells,
                                        max_genes = 5000, expression_limits = c(-3, 3), window = 100, scaling_factor = 0.2,
                                        initial_centering = "col", base_metric = "median",
                                        verbose = FALSE) {
@@ -141,7 +141,7 @@ scandal_cnv_compute_matrix <- function(x, gene_positions_table, reference_cells,
 
   x <- as.matrix(x)
 
-  cnv_matrix <- .scandal_compute_cnv_matrix(x = x,
+  cna_matrix <- .scandal_compute_cna_matrix(x = x,
                                             gene_pos_tbl = gene_positions_table,
                                             reference_cells = reference_cells,
                                             max_genes = max_genes,
@@ -152,43 +152,44 @@ scandal_cnv_compute_matrix <- function(x, gene_positions_table, reference_cells,
                                             base_metric = base_metric,
                                             verbose = verbose)
 
-  if (is.null(cnv_matrix))
-    stop("An error has occured while computing the CNV matrix")
+  if (is.null(cna_matrix))
+    stop("An error has occured while computing the CNA matrix")
 
-  return (cnv_matrix)
+  return (cna_matrix)
 }
 
 #' @importFrom ComplexHeatmap Heatmap rowAnnotation HeatmapAnnotation draw decorate_heatmap_body
 #' @importFrom circlize colorRamp2
 #' @importFrom grDevices dev.off jpeg
+#' @importFrom infercna splitGenes
 #' @export
-scandal_cnv_plot <- function(object, cnv_matrix = NULL, gene_positions_table, reference_cells = NULL, show_reference = FALSE,
+scandal_cna_plot <- function(object, cna_matrix = NULL, reference_cells = NULL, show_reference = FALSE,
                              row_annotation = NULL, row_annotation_cols = NULL, low = "dodgerblue", mid = "white", high = "red",
                              save_to_file = TRUE, show_plot = TRUE, filename = NULL, dirname = ".", width = 1600, height = 1000, quality = 100, verbose = FALSE,
                              cluster_rows = FALSE, ...) {
 
   if (!is.null(object))
-    cnv_matrix <- reducedDim(object, "cnv")
+    cna_matrix <- reducedDim(object, "cna")
 
-  if (is.null(cnv_matrix))
-    stop("CNV matrix not found, did you forget to run scandal_infer_cnv first?")
+  if (is.null(cna_matrix))
+    stop("CNA matrix not found, did you forget to run scandal_infer_cna first?")
 
   if (isTRUE(verbose))
-    message(sprintf("Plotting CNV: data range (%.2f, %.2f), limit set to (-1, 1)", min(cnv_matrix), max(cnv_matrix)))
+    message(sprintf("Plotting CNA: data range (%.2f, %.2f), limit set to (-1, 1)", min(cna_matrix), max(cna_matrix)))
 
   cell_ids <- NULL
   if (!is.null(reference_cells)) {
 
-    malignant_cells <- rownames(cnv_matrix)[!rownames(cnv_matrix) %in% reference_cells]
+    malignant_cells <- rownames(cna_matrix)[!rownames(cna_matrix) %in% reference_cells]
 
     if (isTRUE(show_reference))
       cell_ids <- c(malignant_cells, reference_cells)
     else
       cell_ids <- malignant_cells
   } else
-    cell_ids <- rownames(cnv_matrix)
+    cell_ids <- rownames(cna_matrix)
 
-  plot_name <- paste0("cnv", sample(1:10^9, 1))
+  plot_name <- paste0("cna", sample(1:10^9, 1))
 
   ra <- NULL
   if (!is.null(row_annotation)) {
@@ -200,16 +201,16 @@ scandal_cnv_plot <- function(object, cnv_matrix = NULL, gene_positions_table, re
       ra <- rowAnnotation(df = rann, col = row_annotation_cols, show_annotation_name = FALSE)
   }
 
-  h <- Heatmap(cnv_matrix[cell_ids, ], name = plot_name,
+  h <- Heatmap(cna_matrix[cell_ids, ], name = plot_name,
                col = colorRamp2(c(-1, 0, 1), c(low, mid, high)),
                show_row_names = FALSE, show_column_names = FALSE, cluster_columns = FALSE, cluster_rows = cluster_rows,
                left_annotation = ra,
-               heatmap_legend_param = list(at = c(-1, -0.5, 0, 0.5, 1), title = "Inferred CNV\n(log2 ratio)"), ...)
+               heatmap_legend_param = list(at = c(-1, -0.5, 0, 0.5, 1), title = "Inferred CNA\n(log2 ratio)"), ...)
 
   if (isTRUE(show_plot)) {
     draw(h)
 
-    decorate_heatmap_body(plot_name, .draw_grid(cnv_matrix, gene_positions_table))
+    decorate_heatmap_body(plot_name, .draw_grid(cna_matrix))
   }
 
   if (isTRUE(save_to_file)) {
@@ -221,7 +222,7 @@ scandal_cnv_plot <- function(object, cnv_matrix = NULL, gene_positions_table, re
 
     jpeg(filename = file, width = width, height = height, quality = quality)
     draw(h)
-    decorate_heatmap_body(plot_name, .draw_grid(cnv_matrix, gene_positions_table))
+    decorate_heatmap_body(plot_name, .draw_grid(cna_matrix))
     dev.off()
   }
 
@@ -229,19 +230,19 @@ scandal_cnv_plot <- function(object, cnv_matrix = NULL, gene_positions_table, re
 }
 
 ### =========================================================================
-### CNV scores computation, classification and plotting
+### CNA scores computation, classification and plotting
 ### -------------------------------------------------------------------------
 ###
 
 #'
-#' @title Compute the cell CNV score
+#' @title Compute the cell CNA score
 #'
-#' @description Computes the CNV score for each cell which is composed of the CNV
-#' signal (the sum of squares of computed CNVs) and CNV correlation (the pearson's
-#' correlation between the cell CNV profile and the tumor's CNV profile).
+#' @description Computes the CNA score for each cell which is composed of the CNA
+#' signal (the sum of squares of computed CNAs) and CNA correlation (the pearson's
+#' correlation between the cell CNA profile and the tumor's CNA profile).
 #'
 #' @param object
-#' @param cnv_matrix
+#' @param cna_matrix
 #' @param gene_positions_table
 #' @param hotspot_threshold
 #' @param verbose
@@ -258,86 +259,86 @@ scandal_cnv_plot <- function(object, cnv_matrix = NULL, gene_positions_table, re
 #' @importFrom stats cor quantile
 #' @importFrom tibble tibble
 #' @export
-scandal_cnv_compute_scores <- function(object, cnv_matrix = NULL, gene_positions_table, hotspot_threshold = .9, verbose = FALSE) {
+scandal_cna_compute_scores <- function(object, cna_matrix = NULL, hotspot_threshold = .9, verbose = FALSE) {
 
-  stopifnot(!(is.null(object) & is.null(cnv_matrix)))
+  stopifnot(!(is.null(object) & is.null(cna_matrix)))
   stopifnot(is.null(object) | is_scandal_object(object))
 
   if (!is.null(object))
-    cnv_matrix <- reducedDim(object, "cnv")
+    cna_matrix <- reducedDim(object, "cna")
 
-  if (is.null(cnv_matrix))
-    stop("CNV matrix not found, did you forget to run scandal_infer_cnv first?")
+  if (is.null(cna_matrix))
+    stop("CNA matrix not found, did you forget to run scandal_infer_cna first?")
 
-  cnv_matrix <- t(cnv_matrix)
+  cna_matrix <- t(cna_matrix)
 
-  # Square the CNV matrix
-  tmp <- cnv_matrix^2
+  # Square the CNA matrix
+  tmp <- cna_matrix^2
 
   # Calculate the hotspots - areas with high signal
   pos_mean <- rowMeans(tmp)
   hotspots <- names(pos_mean[pos_mean >= quantile(pos_mean, hotspot_threshold)])
   tmp <- tmp[hotspots, ]
 
-  # Compute the mean squared CNV signal per
-  cnv_signal <- colMeans(tmp)
+  # Compute the mean squared CNA signal per
+  cna_signal <- colMeans(tmp)
 
-  # Compute the tumor CNV profile
-  tumor_cnv0 <- rowMeans(cnv_matrix)
+  # Compute the tumor CNA profile
+  tumor_cna0 <- rowMeans(cna_matrix)
 
-  # Compute the correlation between each cell and the tumor CNV profile
-  cnv_correlation <- apply(cnv_matrix, 2, cor, y = tumor_cnv0, method = "pearson")
+  # Compute the correlation between each cell and the tumor CNA profile
+  cna_correlation <- apply(cna_matrix, 2, cor, y = tumor_cna0, method = "pearson")
 
   # Return the result as a data frame with two variables
-  res <- tibble(CellID = colnames(cnv_matrix), Signal = cnv_signal, Correlation = cnv_correlation)
+  res <- tibble(CellID = colnames(cna_matrix), Signal = cna_signal, Correlation = cna_correlation)
 
   return (res)
 }
 
 #'
-#' @title Classify CNV scores
+#' @title Classify CNA scores
 #'
-#' @description This function classifies the CNV scores according to the supplied signal and correlation thresholds.
+#' @description This function classifies the CNA scores according to the supplied signal and correlation thresholds.
 #'
-#' @param cnv_scores
+#' @param cna_scores
 #' @param signal_threshold
 #' @param correlation_threshold
 #' @param verbose
 #'
 #' @return
 #'
-#' @seealso \link{scandal_cnv_compute_scores}
+#' @seealso \link{scandal_cna_compute_scores}
 #'
 #' @author Avishay Spitzer
 #'
 #' @export
-scandal_cnv_classify_scores <- function(cnv_scores, signal_threshold = 0.05, correlation_threshold = 0.05, verbose = FALSE) {
+scandal_cna_classify_scores <- function(cna_scores, signal_threshold = 0.05, correlation_threshold = 0.05, verbose = FALSE) {
 
-  cnv_detected <- rep("Non-classifiable", nrow(cnv_scores))
+  cna_detected <- rep("Non-classifiable", nrow(cna_scores))
 
-  cnv_detected[which(cnv_scores$Signal >= signal_threshold & cnv_scores$Correlation >= correlation_threshold)] <- "Detected"
-  cnv_detected[which(cnv_scores$Signal <  signal_threshold & cnv_scores$Correlation <  correlation_threshold)] <- "Not detected"
-  cnv_detected[which(cnv_scores$Signal <  signal_threshold & cnv_scores$Correlation >= correlation_threshold)] <- "Low signal"
-  cnv_detected[which(cnv_scores$Signal >= signal_threshold & cnv_scores$Correlation <  correlation_threshold)] <- "Low correlation"
+  cna_detected[which(cna_scores$Signal >= signal_threshold & cna_scores$Correlation >= correlation_threshold)] <- "Detected"
+  cna_detected[which(cna_scores$Signal <  signal_threshold & cna_scores$Correlation <  correlation_threshold)] <- "Not detected"
+  cna_detected[which(cna_scores$Signal <  signal_threshold & cna_scores$Correlation >= correlation_threshold)] <- "Low signal"
+  cna_detected[which(cna_scores$Signal >= signal_threshold & cna_scores$Correlation <  correlation_threshold)] <- "Low correlation"
 
-  cnv_scores$CNVDetected <- cnv_detected
+  cna_scores$CNADetected <- cna_detected
 
-  return (cnv_scores)
+  return (cna_scores)
 }
 
 #' @importFrom dplyr %>% group_by summarise n mutate filter select pull left_join
 #' @importFrom tibble tibble
 #' @importFrom stats setNames
 #' @export
-scandal_cnv_classify_cells <- function(cnv_scores, clusters, cnv_matrix = NULL, cell_class_init = NULL, min_cluster_cc_freq = .5, return_all = FALSE, verbose = FALSE) {
+scandal_cna_classify_cells <- function(cna_scores, clusters, cna_matrix = NULL, cell_class_init = NULL, min_cluster_cc_freq = .5, return_all = FALSE, verbose = FALSE) {
 
   # Simple classification - leaving the low signal and low correlation cells as "Unresolved"
   if (is.null(clusters))
-    data <- .classify_cells_simple(data = cnv_scores)
+    data <- .classify_cells_simple(data = cna_scores)
   else # Complex classifiaction using cluster correlation
-    data <- .classify_cells_cluster_correlation(data = cnv_scores,
+    data <- .classify_cells_cluster_correlation(data = cna_scores,
                                                 clusters = clusters,
-                                                cnv_matrix = cnv_matrix,
+                                                cna_matrix = cna_matrix,
                                                 cell_class_init = cell_class_init,
                                                 min_cluster_cc_freq = min_cluster_cc_freq,
                                                 verbose = verbose)
@@ -349,9 +350,9 @@ scandal_cnv_classify_cells <- function(cnv_scores, clusters, cnv_matrix = NULL, 
 }
 
 #' @export
-scandal_cnv_get_malignant_cells <- function(cnv_scores) {
+scandal_cna_get_malignant_cells <- function(cna_scores) {
 
-  res <- (cnv_scores %>%
+  res <- (cna_scores %>%
             select(CellID, Malignant) %>%
             filter(Malignant == "Malignant"))$CellID
 
@@ -359,16 +360,16 @@ scandal_cnv_get_malignant_cells <- function(cnv_scores) {
 }
 
 #' @export
-scandal_cnv_scores_plot <- function(cnv_scores, signal_threshold = 0.05, correlation_threshold = 0.5, title = NULL, labels = NULL, name = NULL, verbose = FALSE) {
+scandal_cna_scores_plot <- function(cna_scores, signal_threshold = 0.05, correlation_threshold = 0.5, title = NULL, labels = NULL, name = NULL, verbose = FALSE) {
 
-  #cnv_scores <- scandal_cnv_classify_scores(cnv_scores, signal_threshold = signal_threshold, correlation_threshold = correlation_threshold)
+  #cna_scores <- scandal_cna_classify_scores(cna_scores, signal_threshold = signal_threshold, correlation_threshold = correlation_threshold)
 
-  #cnv_detected <- cnv_scores$CNVDetected
+  #cna_detected <- cna_scores$CNADetected
 
-  #non_classifiable <- (length(which(cnv_detected == "Low signal" | cnv_detected == "Low correlation")) / length(cnv_detected)) * 100
+  #non_classifiable <- (length(which(cna_detected == "Low signal" | cna_detected == "Low correlation")) / length(cna_detected)) * 100
 
-  p <- scandal_scatter_plot(x = cnv_scores$Correlation, y = cnv_scores$Signal, labels = labels, color_legend_name = name,
-                            title = title, xlab = "CNV Correlation", ylab = "CNV Signal", plot_ordered = FALSE) +
+  p <- scandal_scatter_plot(x = cna_scores$Correlation, y = cna_scores$Signal, labels = labels, color_legend_name = name,
+                            title = title, xlab = "CNA Correlation", ylab = "CNA Signal", plot_ordered = FALSE) +
         geom_vline(xintercept = correlation_threshold) +
         geom_hline(yintercept = signal_threshold) #+
     #labs(caption = sprintf("%.2f%% of cells are non-classifiable", non_classifiable))
@@ -394,9 +395,9 @@ load_gene_pos_file <- function(filename = "gencode_v19_gene_pos.txt") {
 }
 
 #' @export
-count_genes_per_chromosome <- function(cnv_matrix, gene_pos_tbl) {
+count_genes_per_chromosome <- function(cna_matrix, gene_pos_tbl) {
 
-  chr_pos_tbl <- table(gene_pos_tbl[gene_pos_tbl$Gene %in% colnames(cnv_matrix), "CHR"])[CHRs]
+  chr_pos_tbl <- table(gene_pos_tbl[gene_pos_tbl$Gene %in% colnames(cna_matrix), "CHR"])[CHRs]
 
   return (chr_pos_tbl)
 }
@@ -409,32 +410,32 @@ count_genes_per_chromosome <- function(cnv_matrix, gene_pos_tbl) {
 #CHRs <- c("chr1", "chr2", "chr3", "chr4", "chr5", "chr6", "chr7", "chr8", "chr9", "chr10", "chr11", "chr12", "chr13", "chr14", "chr15", "chr16", "chr17", "chr18", "chr19", "chr20", "chr21", "chr22", "chrX", "chrY")
 CHRs <- c("chr1", "chr2", "chr3", "chr4", "chr5", "chr6", "chr7", "chr8", "chr9", "chr10", "chr11", "chr12", "chr13", "chr14", "chr15", "chr16", "chr17", "chr18", "chr19", "chr20", "chr21", "chr22", "chrX")
 
-.scandal_compute_cnv_matrix <- function(x, gene_pos_tbl, reference_cells, max_genes, expression_limits, window, scaling_factor, initial_centering, base_metric, verbose) {
+.scandal_compute_cna_matrix <- function(x, gene_pos_tbl, reference_cells, max_genes, expression_limits, window, scaling_factor, initial_centering, base_metric, verbose) {
 
-  cnv_matrix <- .prepare_cnv_matrix(x,
+  cna_matrix <- .prepare_cna_matrix(x,
                                     gene_pos_tbl = gene_pos_tbl,
                                     max_genes = max_genes,
                                     expression_limits = expression_limits,
                                     initial_centering = initial_centering,
                                     verbose = verbose)
 
-  gene_pos_tbl <- gene_pos_tbl[gene_pos_tbl$Gene %in% rownames(cnv_matrix), ]
+  gene_pos_tbl <- gene_pos_tbl[gene_pos_tbl$Gene %in% rownames(cna_matrix), ]
 
   if (!is.null(reference_cells)) {
-    m_ref <- cnv_matrix[, names(reference_cells)]
-    m_mal <- cnv_matrix[, !(colnames(cnv_matrix) %in% names(reference_cells))]
+    m_ref <- cna_matrix[, names(reference_cells)]
+    m_mal <- cna_matrix[, !(colnames(cna_matrix) %in% names(reference_cells))]
   } else
-    m_mal <- cnv_matrix
+    m_mal <- cna_matrix
 
-  cnv_ref <- NULL
-  cnv_mal <- NULL
+  cna_ref <- NULL
+  cna_mal <- NULL
   genes_per_chr <- replicate(length(CHRs), 0)
   names(genes_per_chr) <- CHRs
 
   for (c in CHRs) {
 
     if (isTRUE(verbose))
-      message(paste0("Calculate CNV matrix for ", c))
+      message(paste0("Calculate CNA matrix for ", c))
 
     chr_pos_tbl <- gene_pos_tbl[as.character(gene_pos_tbl$CHR) == c, ]
 
@@ -444,113 +445,113 @@ CHRs <- c("chr1", "chr2", "chr3", "chr4", "chr5", "chr6", "chr7", "chr8", "chr9"
     m2 <- m_mal[rownames(m_mal) %in% chr_pos_tbl$Gene, ]
 
     if (!is.null(reference_cells))
-      m1 <- .calc_cnv_matrix(m1, window = window, verbose = verbose)
+      m1 <- .calc_cna_matrix(m1, window = window, verbose = verbose)
 
-    m2 <- .calc_cnv_matrix(m2, window = window, verbose = verbose)
+    m2 <- .calc_cna_matrix(m2, window = window, verbose = verbose)
 
     if (!is.null(reference_cells))
-      cnv_ref <- rbind(cnv_ref, m1)
+      cna_ref <- rbind(cna_ref, m1)
 
-    cnv_mal <- rbind(cnv_mal, m2)
+    cna_mal <- rbind(cna_mal, m2)
 
     genes_per_chr[c] <- nrow(m2)
   }
 
   if (!is.null(reference_cells))
-    cnv_matrix <- cbind(cnv_ref, cnv_mal)
+    cna_matrix <- cbind(cna_ref, cna_mal)
   else
-    cnv_matrix <- cnv_mal
+    cna_matrix <- cna_mal
 
   if (isTRUE(verbose))
-    message(paste0("Median-centering CNV matrix cellwise"))
+    message(paste0("Median-centering CNA matrix cellwise"))
 
-  cnv_matrix <- center_matrix(cnv_matrix, by = "col", method = "median", scale = FALSE, verbose = verbose)
+  cna_matrix <- center_matrix(cna_matrix, by = "col", method = "median", scale = FALSE, verbose = verbose)
 
   if (!is.null(reference_cells)) {
 
     if (isTRUE(verbose))
-      message(paste0("Calculating CNV score"))
+      message(paste0("Calculating CNA score"))
 
-    cnv_matrix <- .assign_cnv_score(cnv_matrix, ref_group = reference_cells, scaling_factor = scaling_factor, base_metric = base_metric, verbose = verbose)
+    cna_matrix <- .assign_cna_score(cna_matrix, ref_group = reference_cells, scaling_factor = scaling_factor, base_metric = base_metric, verbose = verbose)
   }
 
-  cnv_matrix <- cnv_matrix[, colnames(x)]
+  cna_matrix <- cna_matrix[, colnames(x)]
 
   if (isTRUE(verbose))
-    message(paste0("CNV matrix created!"))
+    message(paste0("CNA matrix created!"))
 
-  return (cnv_matrix)
+  return (cna_matrix)
 }
 
-.prepare_cnv_matrix <- function(cnv_matrix, gene_pos_tbl, max_genes, expression_limits, initial_centering, verbose) {
+.prepare_cna_matrix <- function(cna_matrix, gene_pos_tbl, max_genes, expression_limits, initial_centering, verbose) {
 
   if (isTRUE(verbose))
-    message("Preprocessing CNV matrix...")
+    message("Preprocessing CNA matrix...")
 
   if (isTRUE(verbose))
-    message(paste0("Expression matrix contains ", ncol(cnv_matrix), " high quality cells"))
+    message(paste0("Expression matrix contains ", ncol(cna_matrix), " high quality cells"))
 
-  mean_exp <- log2(rowMeans(cnv_matrix) + 1)
+  mean_exp <- log2(rowMeans(cna_matrix) + 1)
 
   mean_exp <- mean_exp[order(mean_exp, decreasing = TRUE)]
   passQC <- head(mean_exp, n = min(max_genes, length(mean_exp)))
 
-  cnv_matrix <- cnv_matrix[names(passQC), ]
+  cna_matrix <- cna_matrix[names(passQC), ]
 
   if (isTRUE(verbose))
     message(paste0("Keeping ", min(max_genes, length(mean_exp)), " highest expressed genes"))
 
-  gene_pos_tbl <- gene_pos_tbl[gene_pos_tbl$Gene %in% rownames(cnv_matrix), ]
+  gene_pos_tbl <- gene_pos_tbl[gene_pos_tbl$Gene %in% rownames(cna_matrix), ]
 
   # Reorder the expression matrix according to the positions of the genes in each chromosome
   if (isTRUE(verbose))
     message(paste0("Reordering genes according to chromosomal location"))
 
-  cnv_matrix <- cnv_matrix[gene_pos_tbl$Gene, ]
+  cna_matrix <- cna_matrix[gene_pos_tbl$Gene, ]
 
   # Log-transform the matrix
   if (isTRUE(verbose))
     message(paste0("Log2 expression matrix [TPM/10]"))
 
-  cnv_matrix <- log_transform(cnv_matrix)
+  cna_matrix <- log_transform(cna_matrix)
 
   # Center the matrix
   if (isTRUE(verbose))
     message(sprintf("Mean-centering expression matrix %s-wise", initial_centering))
 
-  cnv_matrix <- center_matrix(cnv_matrix, by = initial_centering, method = "mean", scale = FALSE, verbose = verbose)
+  cna_matrix <- center_matrix(cna_matrix, by = initial_centering, method = "mean", scale = FALSE, verbose = verbose)
 
   # Bound the expression matrix to reduce the effect of specific highly expressed genes on the mean expression
   if (!is.null(expression_limits)) {
 
     if (isTRUE(verbose))
-      message(paste0("Expresion matrix is in the range (", min(cnv_matrix), ", ", max(cnv_matrix), ")"))
+      message(paste0("Expresion matrix is in the range (", min(cna_matrix), ", ", max(cna_matrix), ")"))
 
     if (isTRUE(verbose))
       message(paste0("Limiting matrix to values betwwen (", expression_limits[1], ", ", expression_limits[2], ")"))
 
-    cnv_matrix <-.bound_matrix(cnv_matrix, expression_limits = expression_limits, verbose = verbose)
+    cna_matrix <-.bound_matrix(cna_matrix, expression_limits = expression_limits, verbose = verbose)
 
-    if (max(cnv_matrix) > expression_limits[2] | min(cnv_matrix) < expression_limits[1])
+    if (max(cna_matrix) > expression_limits[2] | min(cna_matrix) < expression_limits[1])
       stop("Matrix limiting failed")
   }
 
   if (isTRUE(verbose))
     message(paste0("Preprocessing done!"))
 
-  return (cnv_matrix)
+  return (cna_matrix)
 }
 
-.bound_matrix <- function(cnv_matrix, expression_limits, verbose) {
+.bound_matrix <- function(cna_matrix, expression_limits, verbose) {
 
-  cnv_matrix[cnv_matrix > expression_limits[2]] <- expression_limits[2]
-  cnv_matrix[cnv_matrix < expression_limits[1]] <- expression_limits[1]
+  cna_matrix[cna_matrix > expression_limits[2]] <- expression_limits[2]
+  cna_matrix[cna_matrix < expression_limits[1]] <- expression_limits[1]
 
-  return (cnv_matrix)
+  return (cna_matrix)
 }
 
 #' @importFrom caTools runmean
-.calc_cnv_matrix = function(m, window, verbose) {
+.calc_cna_matrix = function(m, window, verbose) {
 
   if (window > nrow(m)) {
 
@@ -573,7 +574,7 @@ CHRs <- c("chr1", "chr2", "chr3", "chr4", "chr5", "chr6", "chr7", "chr8", "chr9"
 }
 
 #' @importFrom stats median
-.assign_cnv_score <- function(m, ref_group, scaling_factor, base_metric, verbose) {
+.assign_cna_score <- function(m, ref_group, scaling_factor, base_metric, verbose) {
 
   calc_score <- function(x) {
 
@@ -618,9 +619,11 @@ CHRs <- c("chr1", "chr2", "chr3", "chr4", "chr5", "chr6", "chr7", "chr8", "chr9"
 }
 
 #' @importFrom grid grid.lines gpar
-.draw_grid <- function(cnv_matrix, gene_positions_table) {
+.draw_grid <- function(cna_matrix) {
 
-  gpc <- count_genes_per_chromosome(cnv_matrix, gene_positions_table)
+  gpc <- infercna::splitGenes(colnames(cna_matrix)) %>% lengths
+
+  #gpc <- count_genes_per_chromosome(cna_matrix, gene_positions_table)
 
   sgpc <- sum(gpc)
 
@@ -645,15 +648,15 @@ CHRs <- c("chr1", "chr2", "chr3", "chr4", "chr5", "chr6", "chr7", "chr8", "chr9"
 
   malignant <- setNames(rep("Unresolved", nrow(data)), nm = rownames(data))
 
-  malignant[data$CNVDetected == "Detected"] <- "Malignant"
-  malignant[data$CNVDetected == "Not detected"] <- "Nonmalignant"
+  malignant[data$CNADetected == "Detected"] <- "Malignant"
+  malignant[data$CNADetected == "Not detected"] <- "Nonmalignant"
 
   data$Malignant <- malignant
 
   return (data)
 }
 
-.classify_cells_cluster_correlation <- function(data, clusters, cnv_matrix, cell_class_init, min_cluster_cc_freq, verbose) {
+.classify_cells_cluster_correlation <- function(data, clusters, cna_matrix, cell_class_init, min_cluster_cc_freq, verbose) {
 
   data$Cluster <- clusters[data$CellID]
 
@@ -687,12 +690,12 @@ CHRs <- c("chr1", "chr2", "chr3", "chr4", "chr5", "chr6", "chr7", "chr8", "chr9"
   data <- .classify_minc(data)
 
   # Classify the low signal and low correlation scores
-  if (!is.null(cnv_matrix)) {
+  if (!is.null(cna_matrix)) {
 
     if (isTRUE(verbose))
       message("Classifying intermediate scores (low signal/correlation)")
 
-    data <- .classify_intermediate_scores(data, cnv_matrix)
+    data <- .classify_intermediate_scores(data, cna_matrix)
   }
 
   if (isTRUE(verbose))
@@ -707,9 +710,9 @@ CHRs <- c("chr1", "chr2", "chr3", "chr4", "chr5", "chr6", "chr7", "chr8", "chr9"
 
   cell_class <- setNames(rep("Unresolved", nrow(data)), data$CellID)
 
-  malignant_cells <- data %>% filter(CNVDetected == "Detected") %>% pull(CellID)
+  malignant_cells <- data %>% filter(CNADetected == "Detected") %>% pull(CellID)
 
-  nonmalignant_cells <- data %>% filter(CNVDetected == "Not detected") %>% pull(CellID)
+  nonmalignant_cells <- data %>% filter(CNADetected == "Not detected") %>% pull(CellID)
 
   cell_class[malignant_cells] <- "Malignant"
   cell_class[nonmalignant_cells] <- "Nonmalignant"
@@ -772,41 +775,41 @@ CHRs <- c("chr1", "chr2", "chr3", "chr4", "chr5", "chr6", "chr7", "chr8", "chr9"
   return (data)
 }
 
-.classify_intermediate_scores <- function(data, cnv_matrix) {
+.classify_intermediate_scores <- function(data, cna_matrix) {
 
   cell_class <- setNames(data$CellClass, data$CellID)
 
   int_scores <- data %>%
     group_by(Cluster) %>%
-    select(CellID, CNVDetected, Cluster, ClusterClass, CellClass) %>%
-    filter(CNVDetected == "Low signal" | CNVDetected == "Low correlation", ClusterClass == "Malignant", CellClass == "Unresolved")
+    select(CellID, CNADetected, Cluster, ClusterClass, CellClass) %>%
+    filter(CNADetected == "Low signal" | CNADetected == "Low correlation", ClusterClass == "Malignant", CellClass == "Unresolved")
 
   nonmalignant_clusters <- unique(data %>% filter(ClusterClass == "Nonmalignant") %>% pull(Cluster))
 
-  cnv_matrix <- t(cnv_matrix)
+  cna_matrix <- t(cna_matrix)
 
-  int_scores$CNVCorOwn <- rep(0, nrow(int_scores))
-  int_scores$CNVCorOth <- rep(0, nrow(int_scores))
+  int_scores$CNACorOwn <- rep(0, nrow(int_scores))
+  int_scores$CNACorOth <- rep(0, nrow(int_scores))
 
   for (i in seq_len(nrow(int_scores))) {
     score_i <- int_scores[i, ]
 
-    cnv_i <- cnv_matrix[, score_i$CellID]
-    cnv_c <- cnv_matrix[, data %>% filter(Cluster == data$Cluster) %>% pull(CellID)]
+    cna_i <- cna_matrix[, score_i$CellID]
+    cna_c <- cna_matrix[, data %>% filter(Cluster == data$Cluster) %>% pull(CellID)]
 
-    cnv_c <- rowMeans(cnv_c)
+    cna_c <- rowMeans(cna_c)
 
-    int_scores$CNVCorOwn[i] <- cor(cnv_i, cnv_c)
+    int_scores$CNACorOwn[i] <- cor(cna_i, cna_c)
 
-    int_scores$CNVCorOth[i] <- max(sapply(nonmalignant_clusters, function(x) {
-      cnv_x <- cnv_matrix[, data %>% filter(x == data$Cluster) %>% pull(CellID)]
-      cnv_x <- rowMeans(cnv_x)
-      cor(cnv_i, cnv_x)
+    int_scores$CNACorOth[i] <- max(sapply(nonmalignant_clusters, function(x) {
+      cna_x <- cna_matrix[, data %>% filter(x == data$Cluster) %>% pull(CellID)]
+      cna_x <- rowMeans(cna_x)
+      cor(cna_i, cna_x)
     }))
   }
 
-  cell_class[int_scores %>% filter(CNVCorOwn > 2*CNVCorOth) %>% pull(CellID)] <- "MbCC"
-  cell_class[int_scores %>% filter(CNVCorOwn <= 2*CNVCorOth) %>% pull(CellID)] <- "Unresolved"
+  cell_class[int_scores %>% filter(CNACorOwn > 2*CNACorOth) %>% pull(CellID)] <- "MbCC"
+  cell_class[int_scores %>% filter(CNACorOwn <= 2*CNACorOth) %>% pull(CellID)] <- "Unresolved"
 
   data$CellClass <- cell_class
 

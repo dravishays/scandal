@@ -4,14 +4,11 @@
 \alias{scandal_plot_qc_metrics}
 \title{Plot quality control metrics}
 \usage{
-scandal_plot_qc_metrics(object, preproc_config_list, show_plot = TRUE,
-  save_to_file = TRUE, histogram_bin_width = 0.2)
+scandal_plot_qc_metrics(object, show_plot = TRUE, save_to_file = TRUE,
+  histogram_bin_width = 0.2)
 }
 \arguments{
 \item{object}{a \code{ScandalDataSet} object.}
-
-\item{preproc_config_list}{a named list of containing a \linkS4class{PreprocConfig}
-object for each sample. The names should correspond to the sample name.}
 
 \item{show_plot}{logical indicating if the plots should be printed to the graphics
 device. Allows saving the plots without printing to the graphics device by setting

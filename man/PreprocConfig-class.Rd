@@ -33,15 +33,15 @@ SS2PreprocConfig()
 
 DefaultPreprocConfig()
 
-\S4method{complexityCutoff}{PreprocConfig}(x)
+\S4method{complexityCutoff}{PreprocConfig}(x, sid = NULL)
 
 \S4method{complexityCutoff}{PreprocConfig}(x) <- value
 
-\S4method{expressionCutoff}{PreprocConfig}(x)
+\S4method{expressionCutoff}{PreprocConfig}(x, sid = NULL)
 
 \S4method{expressionCutoff}{PreprocConfig}(x) <- value
 
-\S4method{housekeepingCutoff}{PreprocConfig}(x)
+\S4method{housekeepingCutoff}{PreprocConfig}(x, sid = NULL)
 
 \S4method{housekeepingCutoff}{PreprocConfig}(x) <- value
 

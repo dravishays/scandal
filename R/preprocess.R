@@ -77,8 +77,6 @@ load_dataset <- function(filename, cell_2_node_map = DEFAULT_CELL_2_NODE_MAP, dr
 #' quality cells and lowly expressed genes and log transforming.
 #'
 #' @param object a ScandalDataSet object (the underlying object).
-#' @param preproc_config_list a named list of containing a \linkS4class{PreprocConfig}
-#' object for each sample. The names should correspond to the sample name.
 #' @param forced_genes_set a vector of genes that should be included in the final
 #' processed object even if their expression is low with the exception of forced
 #' genes with absolute count equals to zero which will be filtered out. Default is NULL.
@@ -120,18 +118,13 @@ load_dataset <- function(filename, cell_2_node_map = DEFAULT_CELL_2_NODE_MAP, dr
 #' @author Avishay Spitzer
 #'
 #' @export
-scandal_preprocess <- function(object, preproc_config_list, forced_genes_set = NULL, use_housekeeping_filter = FALSE, verbose = FALSE) {
+scandal_preprocess <- function(object, forced_genes_set = NULL, use_housekeeping_filter = FALSE, verbose = FALSE) {
 
   stopifnot(is_scandal_object(object),
             (is.null(forced_genes_set) | is.vector(forced_genes_set)),
             is.logical(use_housekeeping_filter))
 
-  stopifnot(!is.null(preproc_config_list),
-            is.list(preproc_config_list),
-            base::setequal(sampleIDs(object), names(preproc_config_list)),
-            base::all(base::lapply(preproc_config_list, function(x) is_config_object(x)) == TRUE))
-
-  object <- .scandal_preprocess(object, preproc_config_list = preproc_config_list, forced_genes_set = forced_genes_set, use_housekeeping_filter = use_housekeeping_filter, verbose = verbose)
+  object <- .scandal_preprocess(object, forced_genes_set = forced_genes_set, use_housekeeping_filter = use_housekeeping_filter, verbose = verbose)
 
   return (object)
 }
@@ -522,8 +515,6 @@ scandal_quality_control_stats <- function(object) {
 #' the nodes contained in \code{object}.
 #'
 #' @param object a \code{ScandalDataSet} object.
-#' @param preproc_config_list a named list of containing a \linkS4class{PreprocConfig}
-#' object for each sample. The names should correspond to the sample name.
 #' @param show_plot logical indicating if the plots should be printed to the graphics
 #' device. Allows saving the plots without printing to the graphics device by setting
 #' to FALSE. Default is TRUE.
@@ -537,26 +528,22 @@ scandal_quality_control_stats <- function(object) {
 #' @author Avishay Spitzer
 #'
 #' @export
-scandal_plot_qc_metrics <- function(object, preproc_config_list, show_plot = TRUE, save_to_file = TRUE, histogram_bin_width = .2) {
+scandal_plot_qc_metrics <- function(object, show_plot = TRUE, save_to_file = TRUE, histogram_bin_width = .2) {
 
   stopifnot(is_scandal_object(object), is.logical(show_plot), is.logical(save_to_file))
 
-  stopifnot(!is.null(preproc_config_list),
-            is.list(preproc_config_list),
-            base::setequal(sampleIDs(object), names(preproc_config_list)),
-            base::all(base::lapply(preproc_config_list, function(x) is_config_object(x)) == TRUE))
-
   project_id <- projectID(object)
 
+  gconf <- preprocConfig(object)
+
   for(sid in sampleIDs(object)) {
-    sconf <- preproc_config_list[[sid]]
-    ndata <- assay(object)[, .subset_cells(colnames(object), sid, cell2SampleMap(object)), drop = FALSE]
+    ndata <- as.matrix(assay(object))[, .subset_cells(colnames(object), sid, cell2SampleMap(object)), drop = FALSE]
 
-    scandal_cell_complexity_distribution_plot(ndata, complexity_cutoff = complexityCutoff(sconf), sample_id = sid, project_id = project_id, show_plot = show_plot, save_to_file = save_to_file)
+    scandal_cell_complexity_distribution_plot(ndata, complexity_cutoff = complexityCutoff(gconf, sid), sample_id = sid, project_id = project_id, show_plot = show_plot, save_to_file = save_to_file)
 
-    scandal_mean_housekeeping_expression_plot(ndata, housekeeping_cutoff = housekeepingCutoff(sconf), sample_id = sid, project_id = project_id, show_plot = show_plot, save_to_file = save_to_file)
+    scandal_mean_housekeeping_expression_plot(ndata, housekeeping_cutoff = housekeepingCutoff(gconf, sid), sample_id = sid, project_id = project_id, show_plot = show_plot, save_to_file = save_to_file)
 
-    scandal_mean_expression_frequency_plot(ndata, expression_cutoff = expressionCutoff(sconf), sample_id = sid, project_id = project_id, show_plot = show_plot, save_to_file = save_to_file, histogram_bin_width = histogram_bin_width)
+    scandal_mean_expression_frequency_plot(ndata, expression_cutoff = expressionCutoff(gconf, sid), sample_id = sid, project_id = project_id, show_plot = show_plot, save_to_file = save_to_file, histogram_bin_width = histogram_bin_width)
   }
 }
 
@@ -769,9 +756,10 @@ scandal_inspect_samples <- function(object, sample_ids, node_id = NULL, verbose 
   x <- unprocessedData(node)
 
   x <- preprocess_matrix(as.matrix(x),
-                         complexity_cutoff = complexityCutoff(preproc_config),
-                         expression_cutoff = expressionCutoff(preproc_config),
-                         housekeeping_cutoff = housekeepingCutoff(preproc_config),
+                         complexity_cutoff = c(min(sapply(complexityCutoff(preproc_config), function(x) min(x[1]))),
+                                               max(sapply(complexityCutoff(preproc_config), function(x) max(x[2])))),
+                         expression_cutoff = max(expressionCutoff(preproc_config)),
+                         housekeeping_cutoff = max(housekeepingCutoff(preproc_config)),
                          log_base = logBase(preproc_config),
                          scaling_factor = scalingFactor(preproc_config),
                          pseudo_count = pseudoCount(preproc_config),
@@ -811,12 +799,21 @@ scandal_inspect_samples <- function(object, sample_ids, node_id = NULL, verbose 
             row.names = sid)
 }
 
-.scandal_preprocess <- function(object, preproc_config_list, forced_genes_set = NULL, use_housekeeping_filter = FALSE, verbose = FALSE) {
+.scandal_preprocess <- function(object, forced_genes_set = NULL, use_housekeeping_filter = FALSE, verbose = FALSE) {
+
+  gconf <- preprocConfig(object)
 
   for(sid in sampleIDs(object)) {
-    sconf <- preproc_config_list[[sid]]
 
-    x_pre <- as.matrix(assay(object)[, .subset_cells(colnames(object), sid, cell2SampleMap(object)), drop = FALSE])
+    x_pre <- as.matrix(assay(object))[, .subset_cells(colnames(object), sid, cell2SampleMap(object)), drop = FALSE]
+
+    sconf <- PreprocConfig(complexityCutoff = complexityCutoff(gconf, sid),
+                           expressionCutoff = expressionCutoff(gconf, sid),
+                           housekeepingCutoff = housekeepingCutoff(gconf, sid),
+                           logBase = logBase(gconf),
+                           scalingFactor = scalingFactor(gconf),
+                           pseudoCount = pseudoCount(gconf),
+                           typeMatrix = typeMatrix(gconf))
 
     x <- preprocess_matrix(x_pre,
                            complexity_cutoff = complexityCutoff(sconf),
@@ -830,7 +827,8 @@ scandal_inspect_samples <- function(object, sample_ids, node_id = NULL, verbose 
 
     stats_qc <- .qc_stats(x_pre, x, sid)
 
-    qc <- QCResults(sconf, cellIDs = colnames(x), geneIDs = rownames(x), statsQC = stats_qc)
+    qc <- QCResults(sconf,
+                    cellIDs = colnames(x), geneIDs = rownames(x), statsQC = stats_qc)
 
     qualityControl(object)[[sid]] <- qc
   }
@@ -843,9 +841,10 @@ scandal_inspect_samples <- function(object, sample_ids, node_id = NULL, verbose 
 
   # Call the matrix preprocessing function
   x <- preprocess_matrix(x,
-                         complexity_cutoff = complexityCutoff(preproc_config),
-                         expression_cutoff = expressionCutoff(preproc_config),
-                         housekeeping_cutoff = housekeepingCutoff(preproc_config),
+                         complexity_cutoff = c(min(sapply(complexityCutoff(preproc_config), function(x) min(x[1]))),
+                                               max(sapply(complexityCutoff(preproc_config), function(x) max(x[2])))),
+                         expression_cutoff = max(expressionCutoff(preproc_config)),
+                         housekeeping_cutoff = max(housekeepingCutoff(preproc_config)),
                          log_base = logBase(preproc_config),
                          scaling_factor = scalingFactor(preproc_config),
                          pseudo_count = pseudoCount(preproc_config),

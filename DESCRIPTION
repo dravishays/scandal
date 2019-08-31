@@ -40,11 +40,12 @@ Imports:
     MASS,
     NMF,
     matrixStats,
-    ConsensusClusterPlus,
-    scrabble
+    ConsensusClusterPlus
 Depends:
     SummarizedExperiment,
-    SingleCellExperiment
+    SingleCellExperiment,
+    scrabble,
+    infercna
 RoxygenNote: 6.1.1
 Collate: 
     'AllGenerics.R'

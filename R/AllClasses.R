@@ -9,6 +9,9 @@ NULL # Do not remove me!!!
 ### -------------------------------------------------------------------------
 ###
 
+setClassUnion("ListOrVector", c("list", "vector"))
+setClassUnion("NumericOrVector", c("numeric", "vector"))
+
 #'
 #' @title PreprocConfig class
 #'
@@ -61,9 +64,9 @@ NULL # Do not remove me!!!
 #'
 #' @export
 setClass("PreprocConfig",
-         slots = c(complexityCutoff = "vector",
-                   expressionCutoff = "numeric",
-                   housekeepingCutoff = "numeric",
+         slots = c(complexityCutoff = "ListOrVector",
+                   expressionCutoff = "NumericOrVector",
+                   housekeepingCutoff = "NumericOrVector",
                    logBase = "numeric",
                    scalingFactor = "numeric",
                    pseudoCount = "numeric",
@@ -140,22 +143,50 @@ DefaultPreprocConfig <- function() {
 ### Validity
 ###
 
-setValidity("PreprocConfig", function(object) {
-
-  if (!is.numeric(object@complexityCutoff))
+.valid_complexity_cutoff <- function(x) {
+  if (!is.numeric(x))
     return (sprintf("complexity cutoff must be of numeric type"))
-  if (length(object@complexityCutoff) != 2)
+  if (length(x) != 2)
     return (sprintf("complexity cutoff must be a numeric vector of length equals to 2"))
-  if (object@complexityCutoff[1] < 0)
+  if (x[1] < 0)
     return (sprintf("lower bound of complexity cutoff must be greater than or equal to 0"))
-  if (object@complexityCutoff[2] <= object@complexityCutoff[1])
+  if (x[2] <= x[1])
     return (sprintf("upper bound of complexity cutoff must be greater than lower bound"))
 
-  if (object@expressionCutoff <= 0)
+  return (NULL)
+}
+
+setValidity("PreprocConfig", function(object) {
+
+  if (is.list(object@complexityCutoff)) {
+    for (co in object@complexityCutoff) {
+      res <- .valid_complexity_cutoff(co)
+
+      if (!is.null(res))
+        return (res)
+    }
+  } else {
+    res <- .valid_complexity_cutoff(object@complexityCutoff)
+
+    if (!is.null(res))
+      return (res)
+  }
+
+  if (length(object@expressionCutoff) > 1){
+    if (is.null(names(object@expressionCutoff)))
+      return (sprintf("expression cutoff vector must be a named vector"))
+  }
+
+  if (any(object@expressionCutoff <= 0))
     return (sprintf("expression cutoff must be greater than or equal to 0"))
 
-  if (object@housekeepingCutoff <= 0)
-    return (sprintf("housekeeping cutoff must be greater than 0"))
+  if (length(object@housekeepingCutoff) > 1){
+    if (is.null(names(object@housekeepingCutoff)))
+      return (sprintf("housekeeping cutoff vector must be a named vector"))
+  }
+
+  if (any(object@housekeepingCutoff <= 0))
+    return (sprintf("housekeeping cutoff must be greater than or equal to 0"))
 
   if (object@logBase <= 0)
     return (sprintf("log base must be greater than 0"))
@@ -177,7 +208,10 @@ setValidity("PreprocConfig", function(object) {
 #' @rdname PreprocConfig-class
 #'
 #' @export
-setMethod("complexityCutoff", "PreprocConfig", function(x) {
+setMethod("complexityCutoff", "PreprocConfig", function(x, sid = NULL) {
+  if (is.list(x@complexityCutoff) & !is.null(sid))
+    return (x@complexityCutoff[[sid]])
+
   return(x@complexityCutoff)
 })
 
@@ -197,7 +231,10 @@ setReplaceMethod("complexityCutoff", "PreprocConfig", function(x, value) {
 #' @rdname PreprocConfig-class
 #'
 #' @export
-setMethod("expressionCutoff", "PreprocConfig", function(x) {
+setMethod("expressionCutoff", "PreprocConfig", function(x, sid = NULL) {
+  if (length(x@expressionCutoff) > 1 & !is.null(sid))
+    return (x@expressionCutoff[sid])
+
   return(x@expressionCutoff)
 })
 
@@ -214,7 +251,10 @@ setReplaceMethod("expressionCutoff", "PreprocConfig", function(x, value) {
 #' @rdname PreprocConfig-class
 #'
 #' @export
-setMethod("housekeepingCutoff", "PreprocConfig", function(x) {
+setMethod("housekeepingCutoff", "PreprocConfig", function(x, sid = NULL) {
+  if (length(x@housekeepingCutoff) > 1 & !is.null(sid))
+    return (x@housekeepingCutoff[sid])
+
   return(x@housekeepingCutoff)
 })
 
@@ -295,6 +335,49 @@ setReplaceMethod("typeMatrix", "PreprocConfig", function(x, value) {
   return(x)
 })
 
+.valid_index <- function(x, i) {
+
+  if (is.character(i))
+    return(all(i %in% names(x)))
+  else if (is.numeric(i)) {
+    return (all(!(is.null(x[i]) | is.na(x[i]))))
+  }
+
+  return (FALSE)
+}
+
+setMethod("[", "PreprocConfig", function(x, i, ...) {
+
+  if (missing(i))
+    return(x)
+
+  if (is.list(x@complexityCutoff)) {
+
+    stopifnot(.valid_index(x@complexityCutoff, i))
+
+    if (length(i) > 1)
+      x@complexityCutoff <- x@complexityCutoff[i]
+    else
+      x@complexityCutoff <- x@complexityCutoff[[i]]
+  }
+
+  if (length(x@expressionCutoff) > 1) {
+
+    stopifnot(.valid_index(x@expressionCutoff, i))
+
+    x@expressionCutoff <- x@expressionCutoff[i]
+  }
+
+  if (length(x@housekeepingCutoff) > 1) {
+
+    stopifnot(.valid_index(x@housekeepingCutoff, i))
+
+    x@housekeepingCutoff <- x@housekeepingCutoff[i]
+  }
+
+  return (x)
+})
+
 ### - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 ### Display
 ###
@@ -304,9 +387,46 @@ setReplaceMethod("typeMatrix", "PreprocConfig", function(x, value) {
 #'
 #' @export
 setMethod("show", "PreprocConfig", function(object) {
-  cat("Complexity cutoff:", complexityCutoff(object), "\n")
-  cat("Expression cutoff:", expressionCutoff(object), "\n")
-  cat("Housekeeping cutoff:", housekeepingCutoff(object), "\n")
+
+  if (is.list(complexityCutoff(object))) {
+
+    str <- sprintf("Complexity cutoff:")
+    for (n in names(complexityCutoff(object))) {
+      co <- complexityCutoff(object)[[n]]
+      str <- paste0(str, sprintf(" %s=(%d, %d)", n, co[1], co[2]))
+    }
+
+    cat(paste0(str, "\n"))
+
+  } else
+    cat(sprintf("Complexity cutoff: (%d, %d)\n", complexityCutoff(object)[1], complexityCutoff(object)[2]))
+
+  if (length(expressionCutoff(object)) == 1)
+    cat("Expression cutoff:", expressionCutoff(object), "\n")
+  else {
+
+    str <- sprintf("Expression cutoff:")
+    for (n in names(expressionCutoff(object))) {
+      co <- expressionCutoff(object)[n]
+      str <- paste0(str, sprintf(" %s=%.2f", n, co))
+    }
+
+    cat(paste0(str, "\n"))
+  }
+
+  if (length(housekeepingCutoff(object)) == 1)
+    cat("Housekeeping cutoff:", housekeepingCutoff(object), "\n")
+  else {
+
+    str <- sprintf("Housekeeping cutoff:")
+    for (n in names(housekeepingCutoff(object))) {
+      co <- housekeepingCutoff(object)[n]
+      str <- paste0(str, sprintf(" %s=%.2f", n, co))
+    }
+
+    cat(paste0(str, "\n"))
+  }
+
   cat("Log base:", logBase(object), "\n")
   cat("Scaling factor:", scalingFactor(object), "\n")
   cat("Pseudo count:", pseudoCount(object), "\n")
@@ -628,6 +748,8 @@ ScandalDataSet <- function(..., preprocConfig = DefaultPreprocConfig(), nodeID =
   int_elementMetadata(object)$Scandal <- DataFrame(row.names = rownames(object))
   int_metadata(object)$Scandal <- list()
 
+  int_metadata(object)$Scandal[["Version"]] <- 1.0
+
   return (object)
 }
 
@@ -773,7 +895,7 @@ setMethod("inspectSamples", "ScandalDataSet", function(object, sampleIDs, nodeID
 
   reducedDims(res) <- SimpleList()
   res@nodeID <- nodeID
-  res@preprocConfig <- preprocConfig(object)
+  res@preprocConfig <- preprocConfig(object)[sampleIDs]
   res@qualityControl <- qc_list
   names(res@qualityControl) <- sampleIDs
   res@unprocessedData <- res@unprocessedData[, .subset_cells(colnames(res@unprocessedData), sampleIDs, cell2SampleMap(object))]

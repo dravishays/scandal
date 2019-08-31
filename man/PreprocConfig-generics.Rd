@@ -17,15 +17,15 @@
 \alias{typeMatrix<-}
 \title{PreprocConfig generics}
 \usage{
-complexityCutoff(x, ...)
+complexityCutoff(x, sid = NULL, ...)
 
 complexityCutoff(x, ...) <- value
 
-expressionCutoff(x, ...)
+expressionCutoff(x, sid = NULL, ...)
 
 expressionCutoff(x, ...) <- value
 
-housekeepingCutoff(x, ...)
+housekeepingCutoff(x, sid = NULL, ...)
 
 housekeepingCutoff(x, ...) <- value
 

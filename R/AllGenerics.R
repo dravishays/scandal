@@ -78,7 +78,7 @@ setGeneric("cell2SampleMap", function(object, ...) standardGeneric("cell2SampleM
 #' @rdname PreprocConfig-generics
 #'
 #' @export
-setGeneric("complexityCutoff", function(x, ...) standardGeneric("complexityCutoff"))
+setGeneric("complexityCutoff", function(x, sid = NULL, ...) standardGeneric("complexityCutoff"))
 
 #' @rdname PreprocConfig-generics
 #'
@@ -88,7 +88,7 @@ setGeneric("complexityCutoff<-", function(x, ..., value) standardGeneric("comple
 #' @rdname PreprocConfig-generics
 #'
 #' @export
-setGeneric("expressionCutoff", function(x, ...) standardGeneric("expressionCutoff"))
+setGeneric("expressionCutoff", function(x, sid = NULL, ...) standardGeneric("expressionCutoff"))
 
 #' @rdname PreprocConfig-generics
 #'
@@ -98,7 +98,7 @@ setGeneric("expressionCutoff<-", function(x, ..., value) standardGeneric("expres
 #' @rdname PreprocConfig-generics
 #'
 #' @export
-setGeneric("housekeepingCutoff", function(x, ...) standardGeneric("housekeepingCutoff"))
+setGeneric("housekeepingCutoff", function(x, sid = NULL, ...) standardGeneric("housekeepingCutoff"))
 
 #' @rdname PreprocConfig-generics
 #'
