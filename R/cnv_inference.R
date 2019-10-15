@@ -83,6 +83,7 @@ scandal_cna_infer <- function(object, gene_positions_table, reference_cells,
   cna_matrix <- scandal_cna_compute_matrix(x = x,
                                            gene_positions_table = gene_positions_table,
                                            reference_cells = reference_cells,
+                                           cells_subset = NULL,
                                            max_genes = max_genes,
                                            expression_limits = expression_limits,
                                            window = window,
@@ -122,7 +123,7 @@ scandal_cna_infer <- function(object, gene_positions_table, reference_cells,
 #' @author Avishay Spitzer
 #'
 #' @export
-scandal_cna_compute_matrix <- function(x, gene_positions_table, reference_cells,
+scandal_cna_compute_matrix <- function(x, gene_positions_table, reference_cells, cells_subset = NULL,
                                        max_genes = 5000, expression_limits = c(-3, 3), window = 100, scaling_factor = 0.2,
                                        initial_centering = "col", base_metric = "median",
                                        verbose = FALSE) {
@@ -144,6 +145,7 @@ scandal_cna_compute_matrix <- function(x, gene_positions_table, reference_cells,
   cna_matrix <- .scandal_compute_cna_matrix(x = x,
                                             gene_pos_tbl = gene_positions_table,
                                             reference_cells = reference_cells,
+                                            cells_subset = cells_subset,
                                             max_genes = max_genes,
                                             expression_limits = expression_limits,
                                             window = window,
@@ -410,7 +412,10 @@ count_genes_per_chromosome <- function(cna_matrix, gene_pos_tbl) {
 #CHRs <- c("chr1", "chr2", "chr3", "chr4", "chr5", "chr6", "chr7", "chr8", "chr9", "chr10", "chr11", "chr12", "chr13", "chr14", "chr15", "chr16", "chr17", "chr18", "chr19", "chr20", "chr21", "chr22", "chrX", "chrY")
 CHRs <- c("chr1", "chr2", "chr3", "chr4", "chr5", "chr6", "chr7", "chr8", "chr9", "chr10", "chr11", "chr12", "chr13", "chr14", "chr15", "chr16", "chr17", "chr18", "chr19", "chr20", "chr21", "chr22", "chrX")
 
-.scandal_compute_cna_matrix <- function(x, gene_pos_tbl, reference_cells, max_genes, expression_limits, window, scaling_factor, initial_centering, base_metric, verbose) {
+.scandal_compute_cna_matrix <- function(x, gene_pos_tbl, reference_cells, cells_subset, max_genes, expression_limits, window, scaling_factor, initial_centering, base_metric, verbose) {
+
+  if (!is.null(cells_subset))
+    x <- x[, unique(c(names(reference_cells), cells_subset))]
 
   cna_matrix <- .prepare_cna_matrix(x,
                                     gene_pos_tbl = gene_pos_tbl,
@@ -782,9 +787,10 @@ CHRs <- c("chr1", "chr2", "chr3", "chr4", "chr5", "chr6", "chr7", "chr8", "chr9"
   int_scores <- data %>%
     group_by(Cluster) %>%
     select(CellID, CNADetected, Cluster, ClusterClass, CellClass) %>%
-    filter(CNADetected == "Low signal" | CNADetected == "Low correlation", ClusterClass == "Malignant", CellClass == "Unresolved")
+    filter(CNADetected == "Low signal" | CNADetected == "Low correlation", CellClass == "Unresolved")
 
   nonmalignant_clusters <- unique(data %>% filter(ClusterClass == "Nonmalignant") %>% pull(Cluster))
+  malignant_clusters <- unique(data %>% filter(ClusterClass == "Malignant") %>% pull(Cluster))
 
   cna_matrix <- t(cna_matrix)
 
@@ -795,20 +801,28 @@ CHRs <- c("chr1", "chr2", "chr3", "chr4", "chr5", "chr6", "chr7", "chr8", "chr9"
     score_i <- int_scores[i, ]
 
     cna_i <- cna_matrix[, score_i$CellID]
-    cna_c <- cna_matrix[, data %>% filter(Cluster == data$Cluster) %>% pull(CellID)]
+    cna_c <- cna_matrix[, data %>% filter(Cluster == score_i$Cluster) %>% pull(CellID)]
 
     cna_c <- rowMeans(cna_c)
 
     int_scores$CNACorOwn[i] <- cor(cna_i, cna_c)
 
-    int_scores$CNACorOth[i] <- max(sapply(nonmalignant_clusters, function(x) {
+    if (score_i$ClusterClass == "Malignant")
+      cc <- nonmalignant_clusters
+    else if (score_i$ClusterClass == "Nonmalignant")
+      cc <- malignant_clusters
+    else
+      stop("Unclassified cluster")
+
+    int_scores$CNACorOth[i] <- max(sapply(cc, function(x) {
       cna_x <- cna_matrix[, data %>% filter(x == data$Cluster) %>% pull(CellID)]
       cna_x <- rowMeans(cna_x)
       cor(cna_i, cna_x)
     }))
   }
 
-  cell_class[int_scores %>% filter(CNACorOwn > 2*CNACorOth) %>% pull(CellID)] <- "MbCC"
+  cell_class[int_scores %>% filter(CNACorOwn > 2*CNACorOth, ClusterClass == "Malignant") %>% pull(CellID)] <- "MbCC"
+  cell_class[int_scores %>% filter(CNACorOwn > 2*CNACorOth, ClusterClass == "Nonmalignant") %>% pull(CellID)] <- "NbCC"
   cell_class[int_scores %>% filter(CNACorOwn <= 2*CNACorOth) %>% pull(CellID)] <- "Unresolved"
 
   data$CellClass <- cell_class
@@ -822,6 +836,7 @@ CHRs <- c("chr1", "chr2", "chr3", "chr4", "chr5", "chr6", "chr7", "chr8", "chr9"
   malignant <- setNames(data$CellClass, data$CellID)
 
   malignant[malignant == "MbCC"] <- "Malignant"
+  malignant[malignant == "NbCC"] <- "Nonmalignant"
   malignant[!(malignant %in% c("Malignant", "Nonmalignant"))] <- "Unresolved"
 
   data$Malignant <- malignant
