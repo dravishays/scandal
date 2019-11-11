@@ -93,6 +93,53 @@ SCANDAL_IDH_O_G2M_MARKERS <- c("HMGB2", "CDK1", "NUSAP1", "UBE2C", "BIRC5", "TPX
                                "AURKB", "BUB1", "KIF11", "ANP32E", "TUBB4B", "GTSE1", "KIF20B", "HJURP", "HJURP", "CDCA3",
                                "HN1", "CDC20", "TTK", "CDC25C", "KIF2C", "RANGAP1", "NCAPD2", "DLGAP5", "CDCA2", "CDCA8")
 
+#'
+#' @title List of AC programs markers from IDH-A dataset (Astrocytoma)
+#'
+#' @export
+SCANDAL_IDH_A_AC_MARKERS <- c("APOE", "SPARCL1", "VIM", "ID4", "TIMP3", "EDNRB", "MLC1", "ID3", "CLU", "TNC",
+                              "ZFP36L1", "ARHGEF26", "ATP1B2", "AGT", "RGMA", "JUN", "PFKFB3", "EZR", "SLC1A3", "ALDOC",
+                              "JUNB", "ATP1A2", "DTNA", "ZFP36", "SOX9", "TRIL", "NDRG2", "NMB", "GFAP", "SLC1A2",
+                              "RFX4", "MALAT1", "LRIG1", "FOS", "EGR1", "STK17B", "FOSB", "ATF3", "ABCA1", "ADCYAP1R1",
+                              "GLUL", "IER2", "ZFP36L2", "ADHFE1", "MSI2", "CPE", "KLF6", "DOCK7", "IRF2BP2", "SPRY2")
+
+#'
+#' @title List of OC programs markers from IDH-A dataset (Astrocytoma)
+#'
+#' @export
+SCANDAL_IDH_A_OC_MARKERS <- c("OLIG1", "NEU4", "GPR17", "SLC1A1", "ATCAY", "SIRT2", "APOD", "MYT1", "OLIG2", "TMEFF2",
+                              "OMG", "ELMO1", "RTKN", "HIP1R", "TNR", "RPSA", "MEGF11", "EVI2A", "OPCML", "LHFPL3",
+                              "RAB33A", "GRIA4", "SERINC5", "NXPH1", "BIN1", "BMP4", "EHD3", "GNAI1", "CSPG4", "DSCAM",
+                              "GALNT13", "ZDHHC9", "ABCG1", "FKBP1A", "LRRN1", "ST8SIA3", "DNM3", "RAPGEF4", "CNP", "PDGFRA",
+                              "PTGDS", "CHGA", "BCAS1", "PLXNB3", "NFASC", "SLC44A1", "GNG4", "PHLDB1", "CD82", "PRKCZ")
+
+#'
+#' @title List of Stemness programs markers from IDH-A dataset (Astrocytoma)
+#'
+#' @export
+SCANDAL_IDH_A_STEMNESS_MARKERS <- c("SOX4", "DCX", "IGFBPL1", "SOX11", "TCF4", "NREP", "RND3", "CCND2", "MIAT", "CAMK2N1",
+                                    "STMN4", "STMN1", "MYT1L", "HN1", "RNF122", "PROX1", "KLHDC8A", "ELAVL4", "NMNAT2", "TUBB",
+                                    "ROBO1", "NELL2", "MLLT11", "CELF4", "POU3F2", "H3F3B", "ENC1", "GNG2", "ACOT7", "AKT3",
+                                    "ARL4C", "FNBP1L", "VOPP1", "TOX3", "TUBB3", "SCG2", "TMSB15A", "TFDP2", "TMSB4X", "CDC42",
+                                    "STMN2", "KCTD13", "RPH3A", "KIF5C", "NFIX", "CALM1", "TNPO2", "BOC", "KLHL13", "PGAP1")
+
+#'
+#' @title List of G1S (cell cycle) programs markers from IDH-A dataset (Astrocytoma)
+#'
+#' @export
+SCANDAL_IDH_A_G1S_MARKERS <- c("MCM5", "PCNA", "TYMS", "FEN1", "MCM2", "MCM4", "RRM1", "UNG", "GINS2", "MCM6",
+                               "CDCA7", "DTL", "PRIM1", "UHRF1", "MLF1IP", "HELLS", "RFC2", "RPA2", "NASP", "RAD51AP1",
+                               "GMNN", "WDR76", "SLBP", "CCNE2", "UBR7", "POLD3", "MSH2", "ATAD2", "RAD51", "RRM2",
+                               "CDC45", "CDC6", "EXO1", "TIPIN", "DSCC1", "BLM", "CASP8AP2", "USP1", "CLSPN", "POLA1")
+
+#'
+#' @title List of G2M (cell cycle) programs markers from IDH-A dataset (Astrocytoma)
+#'
+#' @export
+SCANDAL_IDH_A_G2M_MARKERS <- c("HMGB2", "CDK1", "NUSAP1", "UBE2C", "BIRC5", "TPX2", "TOP2A", "NDC80", "CKS2", "NUF2",
+                               "CKS1B", "MKI67", "TMPO", "CENPF", "TACC3", "FAM64A", "SMC4", "CCNB2", "CKAP2L", "CKAP2",
+                               "AURKB", "BUB1", "KIF11", "ANP32E", "TUBB4B", "GTSE1", "KIF20B", "HJURP", "HJURP", "CDCA3",
+                               "HN1", "CDC20", "TTK", "CDC25C", "KIF2C", "RANGAP1", "NCAPD2", "DLGAP5", "CDCA2", "CDCA8")
 
 
 

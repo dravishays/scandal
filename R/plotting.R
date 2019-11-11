@@ -363,7 +363,7 @@ scandal_simple_heatmap_plot <- function(data, center = TRUE, cluster_rows = TRUE
 #' (no title).
 #' @param title_text_size text size of the title. Default is 20.
 #'
-#' @return A \link{ggplot2} object representing the histogram plot.
+#' @return A \link{ggplot2} object representing the t-SNE plot.
 #'
 #' @seealso \link{Rtsne}
 #'
@@ -412,7 +412,7 @@ scandal_tsne_plot <- function(object, tsne_labels = NULL, legend_name = NULL, ti
 #' (no title).
 #' @param title_text_size text size of the title. Default is 20.
 #'
-#' @return A \link{ggplot2} object representing the histogram plot.
+#' @return A \link{ggplot2} object representing the UMAP plot.
 #'
 #' @seealso \link{umap}
 #'
@@ -442,6 +442,58 @@ scandal_umap_plot <- function(object, umap_labels = NULL, legend_name = NULL, ti
                             title = title,
                             xlab = "UMAP dim1",
                             ylab = "UMAP dim2",
+                            plot_ordered = FALSE,
+                            title_text_size = title_text_size)
+
+  return (p)
+}
+
+#'
+#' @title Create a reduced dimensions plot
+#'
+#' @description This function plots the reduced dimensions coordinates using a scatter plot.
+#'
+#' @param object a \linkS4class{ScandalDataSet} object.
+#' @param rdims the name of the reduced dimensions object that will be retrieved from
+#' \code{object} (using \code{reducedDim} method).
+#' @param labels  an optional vector of character labels for each (x, y) point.
+#' Used for color coding each point. Default is NULL.
+#' @param legend_name the name of the leged. Default is NULL (no label).
+#' @param title an optional string for the title of the plot. Default is NULL
+#' (no title).
+#' @param title_text_size text size of the title. Default is 20.
+#'
+#' @return A \link{ggplot2} object representing the reduced dimensions plot.
+#'
+#' @seealso \link{umap}
+#'
+#' @author Avishay Spitzer
+#'
+#' @export
+scandal_reduced_dims_plot <- function(object, rdims, labels = NULL, legend_name = NULL, title = DEFAULT_TITLE(object, "Reduced dimensions plot"), title_text_size = 20, xlab = "dim1", ylab = "dim2") {
+
+  stopifnot(is_scandal_object(object))
+  stopifnot((is.null(labels) | (is.vector(labels) & is.character(labels))) | (!is.null(labels) & (length(labels) == ncol(labels))))
+  stopifnot(is.null(title) | is.character(title),
+            is.null(legend_name) | is.character(legend_name),
+            is.numeric(title_text_size) & title_text_size > 0)
+  stopifnot(!is.null(rdims) & rdims %in% reducedDimNames(object))
+
+  data <- reducedDim(object, rdims)
+
+  if (is.null(data))
+    stop(rdims, " data not found")
+
+  if (is.character(labels))
+    labels <- as.factor(labels)
+
+  p <- scandal_scatter_plot(x = data[, 1],
+                            y = data[, 2],
+                            labels = labels,
+                            color_legend_name = legend_name,
+                            title = title,
+                            xlab = xlab,
+                            ylab = ylab,
                             plot_ordered = FALSE,
                             title_text_size = title_text_size)
 

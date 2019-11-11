@@ -21,7 +21,7 @@ Used for color coding each point. Default is NULL.}
 \item{title_text_size}{text size of the title. Default is 20.}
 }
 \value{
-A \link{ggplot2} object representing the histogram plot.
+A \link{ggplot2} object representing the t-SNE plot.
 }
 \description{
 This function plots the t-SNE coordinates using a scatter plot.
