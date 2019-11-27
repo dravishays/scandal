@@ -19,7 +19,7 @@ in \code{x}}
 \item{return_sorted}{wether the result should be returned in descending order. Defaule is FALSE}
 }
 \value{
-A \lnik{tibble} with two columns: Cluster and MCD (Markers Cluster Density).
+A \link{tibble} with two columns: Cluster and MCD (Markers Cluster Density).
 }
 \description{
 This function computes the expression density of a set of marker genes

@@ -114,7 +114,7 @@ compute_louvain_clusters <- function(data, k) {
 #' in \code{x}
 #' @param return_sorted wether the result should be returned in descending order. Defaule is FALSE
 #'
-#' @return A \lnik{tibble} with two columns: Cluster and MCD (Markers Cluster Density).
+#' @return A \link{tibble} with two columns: Cluster and MCD (Markers Cluster Density).
 #'
 #' @author Avishay Spitzer
 #'
