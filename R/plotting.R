@@ -326,7 +326,7 @@ scandal_simple_heatmap_plot <- function(data, center = TRUE, cluster_rows = TRUE
     if (isFALSE(is_corr_matrix))
       ord <- scalop::hca_order(x = data)
     else
-      ord <- scalop::hca_cor(x = data)
+      ord <- scalop::hca_order(x = data, cor.method = "none")
 
     data <- data[, ord]
   }
@@ -335,7 +335,7 @@ scandal_simple_heatmap_plot <- function(data, center = TRUE, cluster_rows = TRUE
     if (isFALSE(is_corr_matrix))
       ord <- scalop::hca_order(x = t(data))
     else
-      ord <- scalop::hca_cor(x = t(data))
+      ord <- scalop::hca_order(x = t(data), cor.method = "none")
 
     data <- data[ord, ]
   }
