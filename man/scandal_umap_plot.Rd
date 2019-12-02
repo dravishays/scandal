@@ -4,8 +4,13 @@
 \alias{scandal_umap_plot}
 \title{Create a UMAP plot}
 \usage{
-scandal_umap_plot(object, umap_labels = NULL, legend_name = NULL,
-  title = DEFAULT_TITLE(object, "UMAP plot"), title_text_size = 20)
+scandal_umap_plot(
+  object,
+  umap_labels = NULL,
+  legend_name = NULL,
+  title = DEFAULT_TITLE(object, "UMAP plot"),
+  title_text_size = 20
+)
 }
 \arguments{
 \item{object}{a \linkS4class{ScandalDataSet} object.}

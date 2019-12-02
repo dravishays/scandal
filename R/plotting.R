@@ -324,20 +324,20 @@ scandal_simple_heatmap_plot <- function(data, center = TRUE, cluster_rows = TRUE
 
   if (isTRUE(cluster_columns)) {
     if (isFALSE(is_corr_matrix))
-      ord <- scrabble::clusta(mat = t(data))
+      ord <- scalop::hca_order(x = data)
     else
-      ord <- scrabble::clusta(CR = t(data))
+      ord <- scalop::hca_cor(x = data)
 
-    data <- data[ord$ORD, ]
+    data <- data[, ord]
   }
 
   if (isTRUE(cluster_rows)) {
     if (isFALSE(is_corr_matrix))
-      ord <- scrabble::clusta(mat = data)
+      ord <- scalop::hca_order(x = t(data))
     else
-      ord <- scrabble::clusta(CR = data)
+      ord <- scalop::hca_cor(x = t(data))
 
-    data <- data[, ord$ORD]
+    data <- data[ord, ]
   }
 
   melted_data <- melt(data)

@@ -4,8 +4,12 @@
 \alias{scandal_cna_compute_scores}
 \title{Compute the cell CNA score}
 \usage{
-scandal_cna_compute_scores(object, cna_matrix = NULL,
-  hotspot_threshold = 0.9, verbose = FALSE)
+scandal_cna_compute_scores(
+  object,
+  cna_matrix = NULL,
+  hotspot_threshold = 0.9,
+  verbose = FALSE
+)
 }
 \arguments{
 \item{verbose}{}

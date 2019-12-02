@@ -4,8 +4,7 @@
 \alias{center_matrix}
 \title{Centers a matrix}
 \usage{
-center_matrix(x, by = "row", method = "mean", scale = FALSE,
-  verbose = FALSE)
+center_matrix(x, by = "row", method = "mean", scale = FALSE, verbose = FALSE)
 }
 \arguments{
 \item{x}{a numeric matrix or Matrix object.}

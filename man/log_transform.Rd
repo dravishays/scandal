@@ -5,11 +5,21 @@
 \alias{reverse_log_transform}
 \title{Log-transforms a numeric object}
 \usage{
-log_transform(x, log_base = 2, scaling_factor = 1, pseudo_count = 1,
-  verbose = FALSE)
+log_transform(
+  x,
+  log_base = 2,
+  scaling_factor = 1,
+  pseudo_count = 1,
+  verbose = FALSE
+)
 
-reverse_log_transform(x, log_base = 2, scaling_factor = 1,
-  pseudo_count = 1, verbose = FALSE)
+reverse_log_transform(
+  x,
+  log_base = 2,
+  scaling_factor = 1,
+  pseudo_count = 1,
+  verbose = FALSE
+)
 }
 \arguments{
 \item{x}{a numeric object (i.e. vector or matrix)}

@@ -4,9 +4,15 @@
 \alias{load_dataset}
 \title{Load dataset from file}
 \usage{
-load_dataset(filename, cell_2_node_map = DEFAULT_CELL_2_NODE_MAP,
-  drop_cols = 1, rownames_col = 1, excluded_samples = NULL,
-  as_Matrix = TRUE, verbose = FALSE)
+load_dataset(
+  filename,
+  cell_2_node_map = DEFAULT_CELL_2_NODE_MAP,
+  drop_cols = 1,
+  rownames_col = 1,
+  excluded_samples = NULL,
+  as_Matrix = TRUE,
+  verbose = FALSE
+)
 }
 \arguments{
 \item{filename}{the name of the file containing the dataset (in tab-delimited

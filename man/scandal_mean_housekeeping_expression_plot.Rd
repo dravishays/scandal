@@ -4,8 +4,14 @@
 \alias{scandal_mean_housekeeping_expression_plot}
 \title{Housekeeping genes expression plot}
 \usage{
-scandal_mean_housekeeping_expression_plot(x, housekeeping_cutoff,
-  sample_id, project_id = ".", show_plot = TRUE, save_to_file = TRUE)
+scandal_mean_housekeeping_expression_plot(
+  x,
+  housekeeping_cutoff,
+  sample_id,
+  project_id = ".",
+  show_plot = TRUE,
+  save_to_file = TRUE
+)
 }
 \arguments{
 \item{x}{an expression matrix.}

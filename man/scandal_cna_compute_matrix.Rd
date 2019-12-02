@@ -4,10 +4,19 @@
 \alias{scandal_cna_compute_matrix}
 \title{CNA matrix computation}
 \usage{
-scandal_cna_compute_matrix(x, gene_positions_table, reference_cells,
-  cells_subset = NULL, max_genes = 5000, expression_limits = c(-3,
-  3), window = 100, scaling_factor = 0.2, initial_centering = "col",
-  base_metric = "median", verbose = FALSE)
+scandal_cna_compute_matrix(
+  x,
+  gene_positions_table,
+  reference_cells,
+  cells_subset = NULL,
+  max_genes = 5000,
+  expression_limits = c(-3, 3),
+  window = 100,
+  scaling_factor = 0.2,
+  initial_centering = "col",
+  base_metric = "median",
+  verbose = FALSE
+)
 }
 \arguments{
 \item{verbose}{}

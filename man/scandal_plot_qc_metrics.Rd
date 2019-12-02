@@ -4,8 +4,12 @@
 \alias{scandal_plot_qc_metrics}
 \title{Plot quality control metrics}
 \usage{
-scandal_plot_qc_metrics(object, show_plot = TRUE, save_to_file = TRUE,
-  histogram_bin_width = 0.2)
+scandal_plot_qc_metrics(
+  object,
+  show_plot = TRUE,
+  save_to_file = TRUE,
+  histogram_bin_width = 0.2
+)
 }
 \arguments{
 \item{object}{a \code{ScandalDataSet} object.}

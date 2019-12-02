@@ -4,8 +4,7 @@
 \alias{scandal_inspect_samples}
 \title{Samples inspection}
 \usage{
-scandal_inspect_samples(object, sample_ids, node_id = NULL,
-  verbose = FALSE)
+scandal_inspect_samples(object, sample_ids, node_id = NULL, verbose = FALSE)
 }
 \arguments{
 \item{object}{a \code{ScandalDataSet} object}

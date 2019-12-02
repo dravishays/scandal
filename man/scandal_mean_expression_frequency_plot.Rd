@@ -4,9 +4,15 @@
 \alias{scandal_mean_expression_frequency_plot}
 \title{Mean gene expression distribution plot}
 \usage{
-scandal_mean_expression_frequency_plot(x, expression_cutoff, sample_id,
-  project_id = ".", show_plot = TRUE, save_to_file = TRUE,
-  histogram_bin_width = 0.2)
+scandal_mean_expression_frequency_plot(
+  x,
+  expression_cutoff,
+  sample_id,
+  project_id = ".",
+  show_plot = TRUE,
+  save_to_file = TRUE,
+  histogram_bin_width = 0.2
+)
 }
 \arguments{
 \item{x}{an expression matrix.}

@@ -4,8 +4,12 @@
 \alias{scandal_cna_classify_scores}
 \title{Classify CNA scores}
 \usage{
-scandal_cna_classify_scores(cna_scores, signal_threshold = 0.05,
-  correlation_threshold = 0.05, verbose = FALSE)
+scandal_cna_classify_scores(
+  cna_scores,
+  signal_threshold = 0.05,
+  correlation_threshold = 0.05,
+  verbose = FALSE
+)
 }
 \arguments{
 \item{verbose}{}

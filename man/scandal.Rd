@@ -3,7 +3,6 @@
 \docType{package}
 \name{scandal}
 \alias{scandal}
-\alias{scandal-package}
 \title{scandal: a package for single-cell analysis}
 \description{
 The scandal package provides a framework for performing analysis of

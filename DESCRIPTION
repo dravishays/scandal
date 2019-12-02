@@ -44,9 +44,9 @@ Imports:
 Depends:
     SummarizedExperiment,
     SingleCellExperiment,
-    scrabble,
+    scalop,
     infercna
-RoxygenNote: 6.1.1
+RoxygenNote: 7.0.1
 Collate: 
     'AllGenerics.R'
     'AllClasses.R'
@@ -57,3 +57,4 @@ Collate:
     'preprocess.R'
     'programs.R'
     'scandal.R'
+    'utils.R'

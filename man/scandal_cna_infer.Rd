@@ -4,10 +4,18 @@
 \alias{scandal_cna_infer}
 \title{CNA inference}
 \usage{
-scandal_cna_infer(object, gene_positions_table, reference_cells,
-  max_genes = 5000, expression_limits = c(-3, 3), window = 100,
-  scaling_factor = 0.2, initial_centering = "col",
-  base_metric = "median", verbose = FALSE)
+scandal_cna_infer(
+  object,
+  gene_positions_table,
+  reference_cells,
+  max_genes = 5000,
+  expression_limits = c(-3, 3),
+  window = 100,
+  scaling_factor = 0.2,
+  initial_centering = "col",
+  base_metric = "median",
+  verbose = FALSE
+)
 }
 \arguments{
 \item{object}{a \linkS4class{ScandalDataSet} object.}

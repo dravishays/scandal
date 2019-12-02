@@ -4,12 +4,19 @@
 \alias{scandal_setup_analysis}
 \title{Setup analysis tools}
 \usage{
-scandal_setup_analysis(object, computation_opts = c(correlation = TRUE,
-  tsne = TRUE, umap = TRUE), cor_method = "pearson",
-  tsne_perplexity = 30, tsne_pca = TRUE, tsne_initial_dims = 50,
-  tsne_pca_center = TRUE, tsne_pca_scale = FALSE,
-  tsne_normalize = TRUE, umap_config = scandal_default_umap_config(),
-  verbose = FALSE)
+scandal_setup_analysis(
+  object,
+  computation_opts = c(correlation = TRUE, tsne = TRUE, umap = TRUE),
+  cor_method = "pearson",
+  tsne_perplexity = 30,
+  tsne_pca = TRUE,
+  tsne_initial_dims = 50,
+  tsne_pca_center = TRUE,
+  tsne_pca_scale = FALSE,
+  tsne_normalize = TRUE,
+  umap_config = scandal_default_umap_config(),
+  verbose = FALSE
+)
 }
 \arguments{
 \item{umap_config}{}

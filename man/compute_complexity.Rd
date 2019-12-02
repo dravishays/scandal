@@ -4,8 +4,12 @@
 \alias{compute_complexity}
 \title{Compute cell complexity}
 \usage{
-compute_complexity(x, return_sorted = FALSE, cell_subset = NULL,
-  verbose = FALSE)
+compute_complexity(
+  x,
+  return_sorted = FALSE,
+  cell_subset = NULL,
+  verbose = FALSE
+)
 }
 \arguments{
 \item{x}{a numeric matrix or Matrix object.}

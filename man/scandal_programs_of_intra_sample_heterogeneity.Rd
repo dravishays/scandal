@@ -4,12 +4,25 @@
 \alias{scandal_programs_of_intra_sample_heterogeneity}
 \title{Programs of intra-sample heterogeneity}
 \usage{
-scandal_programs_of_intra_sample_heterogeneity(object, samples = NULL,
-  clustering_data = NULL, algorithm = "nmf", rank = 10,
-  ngenes1 = 50, ngenes2 = 30, sd_threshold = 0.8,
-  filter_method = "relative", n_clusters_min = 2,
-  n_clusters_max = 10, bin_control = TRUE, n_control_bins = 25,
-  n_bin_genes = 100, return_all = FALSE, verbose = FALSE, ...)
+scandal_programs_of_intra_sample_heterogeneity(
+  object,
+  samples = NULL,
+  clustering_data = NULL,
+  algorithm = "nmf",
+  rank = 10,
+  ngenes1 = 50,
+  ngenes2 = 30,
+  sd_threshold = 0.8,
+  filter_method = "relative",
+  n_clusters_min = 2,
+  n_clusters_max = 10,
+  bin_control = TRUE,
+  n_control_bins = 25,
+  n_bin_genes = 100,
+  return_all = FALSE,
+  verbose = FALSE,
+  ...
+)
 }
 \arguments{
 \item{...}{further arguments passed to nmf function}
@@ -41,7 +54,7 @@ The algorithm performs the following steps:
   the \code{ngenes1} parameter. The number of initial within-sample programs correpsonds
   to \code{rank}.
   \item For each sample score the cells for each of the within-sample programs by calling
-  \link{score_within_samples}. See \link{scrabble::score} for more details about how to
+  \link{score_within_samples}. See \link{scalop::score} for more details about how to
   score cells while controling for differences in cell complexities.
   \item For each sample compute the standard deviation of scores for each within-sample
   program by calling \link{compute_programs_sd}.

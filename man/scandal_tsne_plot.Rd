@@ -4,8 +4,13 @@
 \alias{scandal_tsne_plot}
 \title{Create a t-SNE plot}
 \usage{
-scandal_tsne_plot(object, tsne_labels = NULL, legend_name = NULL,
-  title = DEFAULT_TITLE(object, "t-SNE plot"), title_text_size = 20)
+scandal_tsne_plot(
+  object,
+  tsne_labels = NULL,
+  legend_name = NULL,
+  title = DEFAULT_TITLE(object, "t-SNE plot"),
+  title_text_size = 20
+)
 }
 \arguments{
 \item{object}{a \linkS4class{ScandalDataSet} object.}

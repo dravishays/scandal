@@ -4,9 +4,17 @@
 \alias{scandal_histogram_plot}
 \title{Create a histogram plot}
 \usage{
-scandal_histogram_plot(data, title = NULL, xlab = NULL,
-  ylab = "Frequency", by = 0.2, title_text_size = 20,
-  colour = "black", fill = "lightblue", alpha = 0.2)
+scandal_histogram_plot(
+  data,
+  title = NULL,
+  xlab = NULL,
+  ylab = "Frequency",
+  by = 0.2,
+  title_text_size = 20,
+  colour = "black",
+  fill = "lightblue",
+  alpha = 0.2
+)
 }
 \arguments{
 \item{data}{a numeric vector of observations.}

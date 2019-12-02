@@ -45,7 +45,7 @@
 #'   the \code{ngenes1} parameter. The number of initial within-sample programs correpsonds
 #'   to \code{rank}.
 #'   \item For each sample score the cells for each of the within-sample programs by calling
-#'   \link{score_within_samples}. See \link{scrabble::score} for more details about how to
+#'   \link{score_within_samples}. See \link{scalop::score} for more details about how to
 #'   score cells while controling for differences in cell complexities.
 #'   \item For each sample compute the standard deviation of scores for each within-sample
 #'   program by calling \link{compute_programs_sd}.
@@ -212,7 +212,7 @@ nmf_extract_programs <- function(nmf_data, n = 50, verbose = FALSE) {
 
 #' @author Avishay Spitzer
 #'
-#' @importFrom scrabble score
+#' @importFrom scalop score
 #'
 #' @export
 score_within_samples <- function(samples, ws_programs, bin_control = TRUE, n_control_bins = 25, n_bin_genes = 100, ..., verbose = FALSE) {
@@ -282,7 +282,7 @@ within_sample_variable_programs <- function(ws_score_sd, ws_programs, sd_thresho
 
 #' @author Avishay Spitzer
 #'
-#' @importFrom scrabble score
+#' @importFrom scalop score
 #'
 #' @export
 score_between_samples <- function(x, programs, bin_control = TRUE, n_control_bins = 25, n_bin_genes = 100, ..., verbose = FALSE) {

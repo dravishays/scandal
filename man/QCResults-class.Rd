@@ -14,8 +14,7 @@
 \alias{show,QCResults-method}
 \title{QCResults class}
 \usage{
-QCResults(preprocConfig, cellIDs = c(), geneIDs = c(),
-  statsQC = DataFrame())
+QCResults(preprocConfig, cellIDs = c(), geneIDs = c(), statsQC = DataFrame())
 
 \S4method{preprocConfig}{QCResults}(object)
 

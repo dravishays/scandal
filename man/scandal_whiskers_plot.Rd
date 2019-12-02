@@ -4,9 +4,16 @@
 \alias{scandal_whiskers_plot}
 \title{Create a box-and-whiskers plot}
 \usage{
-scandal_whiskers_plot(data, labels, title = NULL, xlab = NULL,
-  ylab = NULL, palette = NULL, legend_name = NULL,
-  title_text_size = 20)
+scandal_whiskers_plot(
+  data,
+  labels,
+  title = NULL,
+  xlab = NULL,
+  ylab = NULL,
+  palette = NULL,
+  legend_name = NULL,
+  title_text_size = 20
+)
 }
 \arguments{
 \item{data}{a numeric vector of observations.}

@@ -45,8 +45,7 @@ ScandalDataSet(..., preprocConfig = DefaultPreprocConfig(),
 
 \S4method{cell2SampleMap}{ScandalDataSet}(object)
 
-\S4method{inspectSamples}{ScandalDataSet}(object, sampleIDs,
-  nodeID = NODE_ID())
+\S4method{inspectSamples}{ScandalDataSet}(object, sampleIDs, nodeID = NODE_ID())
 
 \S4method{show}{ScandalDataSet}(object)
 }

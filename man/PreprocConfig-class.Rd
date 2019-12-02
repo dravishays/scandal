@@ -24,8 +24,15 @@
 \alias{show,PreprocConfig-method}
 \title{PreprocConfig class}
 \usage{
-PreprocConfig(complexityCutoff, expressionCutoff, housekeepingCutoff,
-  logBase, scalingFactor, pseudoCount, typeMatrix)
+PreprocConfig(
+  complexityCutoff,
+  expressionCutoff,
+  housekeepingCutoff,
+  logBase,
+  scalingFactor,
+  pseudoCount,
+  typeMatrix
+)
 
 NucseqPreprocConfig()
 

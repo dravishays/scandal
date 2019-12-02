@@ -4,9 +4,18 @@
 \alias{scandal_scatter_plot}
 \title{Create a scatter plot}
 \usage{
-scandal_scatter_plot(x, y, labels = NULL, color_legend_name = NULL,
-  title = NULL, xlab = NULL, ylab = NULL, plot_ordered = FALSE,
-  order_by_axis = "y", title_text_size = 20)
+scandal_scatter_plot(
+  x,
+  y,
+  labels = NULL,
+  color_legend_name = NULL,
+  title = NULL,
+  xlab = NULL,
+  ylab = NULL,
+  plot_ordered = FALSE,
+  order_by_axis = "y",
+  title_text_size = 20
+)
 }
 \arguments{
 \item{x}{a numeric vector representing the variable to plot in the x axis. If

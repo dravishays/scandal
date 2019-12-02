@@ -4,11 +4,21 @@
 \alias{preprocess_matrix}
 \title{Matrix preprocessing}
 \usage{
-preprocess_matrix(x, complexity_cutoff, expression_cutoff,
-  housekeeping_cutoff, log_base, scaling_factor, pseudo_count,
-  sample_id = NULL, cell_ids = NULL, gene_ids = NULL,
-  forced_genes_set = NULL, use_housekeeping_filter = FALSE,
-  verbose = FALSE)
+preprocess_matrix(
+  x,
+  complexity_cutoff,
+  expression_cutoff,
+  housekeeping_cutoff,
+  log_base,
+  scaling_factor,
+  pseudo_count,
+  sample_id = NULL,
+  cell_ids = NULL,
+  gene_ids = NULL,
+  forced_genes_set = NULL,
+  use_housekeeping_filter = FALSE,
+  verbose = FALSE
+)
 }
 \arguments{
 \item{x}{a numeric matrix.}

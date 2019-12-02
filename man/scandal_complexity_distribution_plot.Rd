@@ -4,8 +4,11 @@
 \alias{scandal_complexity_distribution_plot}
 \title{Plot compexity distribution accross different nodes}
 \usage{
-scandal_complexity_distribution_plot(object, show_plot = TRUE,
-  save_to_file = TRUE)
+scandal_complexity_distribution_plot(
+  object,
+  show_plot = TRUE,
+  save_to_file = TRUE
+)
 }
 \arguments{
 \item{object}{a \code{ScandalDataSet} object.}

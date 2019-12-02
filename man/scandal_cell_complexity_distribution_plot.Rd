@@ -4,8 +4,14 @@
 \alias{scandal_cell_complexity_distribution_plot}
 \title{Complexity distribution plot}
 \usage{
-scandal_cell_complexity_distribution_plot(x, complexity_cutoff, sample_id,
-  project_id = ".", show_plot = TRUE, save_to_file = TRUE)
+scandal_cell_complexity_distribution_plot(
+  x,
+  complexity_cutoff,
+  sample_id,
+  project_id = ".",
+  show_plot = TRUE,
+  save_to_file = TRUE
+)
 }
 \arguments{
 \item{x}{an expression matrix.}

@@ -4,9 +4,16 @@
 \alias{scandal_plot}
 \title{Plot and save a figure}
 \usage{
-scandal_plot(p, show_plot = TRUE, save_to_file = FALSE,
-  project_dir = ".", plots_dir = "plots", filename = NULL,
-  dirname = ".", device = "png")
+scandal_plot(
+  p,
+  show_plot = TRUE,
+  save_to_file = FALSE,
+  project_dir = ".",
+  plots_dir = "plots",
+  filename = NULL,
+  dirname = ".",
+  device = "png"
+)
 }
 \arguments{
 \item{p}{a \code{ggplot} object.}

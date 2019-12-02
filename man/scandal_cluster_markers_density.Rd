@@ -4,8 +4,13 @@
 \alias{scandal_cluster_markers_density}
 \title{Compute cluster markers density}
 \usage{
-scandal_cluster_markers_density(x, clusters, mname, markers,
-  return_sorted = FALSE)
+scandal_cluster_markers_density(
+  x,
+  clusters,
+  mname,
+  markers,
+  return_sorted = FALSE
+)
 }
 \arguments{
 \item{x}{gene expression matrix}
