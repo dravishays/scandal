@@ -46,7 +46,7 @@ Depends:
     SingleCellExperiment,
     scalop,
     infercna
-RoxygenNote: 7.0.1
+RoxygenNote: 7.0.2
 Collate: 
     'AllGenerics.R'
     'AllClasses.R'
