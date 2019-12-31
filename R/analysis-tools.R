@@ -1,4 +1,14 @@
 
+#'
+#' @title Scandal default UMAP configuration
+#'
+#' @description Returns a UMAP configuration object containing the default configuration which scandal uses to
+#' compute the UMAP coordinates.
+#'
+#' @details The current configuration uses the Pearson's correlation as default distance metric.
+#'
+#' @return A \code{umap.defaults} object.
+#'
 #' @export
 scandal_default_umap_config <- function() {
 
