@@ -12,14 +12,13 @@
 #' for classifying malignant and non-malignant cells.
 #'
 #' @param object a \linkS4class{ScandalDataSet} object.
-#' @param gene_positions_table a data frame containing all genes ordered by the position
-#' of the gene on the chromosome and by the order of the chromosomes. The data frame should
-#' contain the column names "Gene" and "CHR".
 #' @param reference_cells a named vector of the cluster assignments of the reference cells.
 #' The names should correspond to the cell IDs of the reference (non-malignant) cells. The
 #' CNA matrix can be computed without a reference (with \code{reference=NULL}) but this is
 #' not recommended as downstream comoutations using the inferred CNA matrix will be less
 #' reliable.
+#' @param genome a string indicating the genome to be used for CNA inference. Must be one
+#' of the available genomes in the \link{infercna} package. Default is hg19.
 #' @param max_genes maximal number of genes to use for computing the CNA matrix. Default
 #' is 5000.
 #' @param expression_limits a numeric vector with two elements representing the upper
@@ -61,13 +60,14 @@
 #' @author Avishay Spitzer
 #'
 #' @export
-scandal_cna_infer <- function(object, gene_positions_table, reference_cells,
+scandal_cna_infer <- function(object, reference_cells, genome = "hg19",
                               max_genes = 5000, expression_limits = c(-3, 3), window = 100, scaling_factor = 0.2,
                               initial_centering = "col", base_metric = "median",
                               verbose = FALSE) {
 
   stopifnot(is_scandal_object(object))
-  stopifnot(!is.null(gene_positions_table), is.data.frame(gene_positions_table), c("Gene", "CHR") %in% colnames(gene_positions_table))
+  # stopifnot(!is.null(gene_positions_table), is.data.frame(gene_positions_table), c("Gene", "CHR") %in% colnames(gene_positions_table))
+  # stopifnot(genome %in% infercna::availableGenomes())
   stopifnot(!is.null(reference_cells), is.vector(reference_cells),!is.null(names(reference_cells)), all(names(reference_cells) %in% colnames(object)) == TRUE,
             is.character(reference_cells) | is.factor(reference_cells))
   stopifnot(is.numeric(max_genes))
@@ -79,6 +79,10 @@ scandal_cna_infer <- function(object, gene_positions_table, reference_cells,
   stopifnot(is.logical(verbose))
 
   x <- as.matrix(unprocessedData(object))[, colnames(object)]
+
+  infercna::useGenome(genome)
+  genome <- infercna::retrieveGenome(name = genome)
+  gene_positions_table <- data.frame(Gene = genome$symbol, CHR = paste0("chr", genome$chromosome_name), stringsAsFactors = FALSE)
 
   cna_matrix <- scandal_cna_compute_matrix(x = x,
                                            gene_positions_table = gene_positions_table,

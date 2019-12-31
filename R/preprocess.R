@@ -368,6 +368,52 @@ compute_complexity <- function(x, return_sorted = FALSE, cell_subset = NULL, ver
 }
 
 #'
+#' @title Compute housekeeping genes expression
+#'
+#' @description Computes the mean expression of housekeeping genes for each cell.
+#' Housekeeping genes are genes that are ubiquitously expressed in all cells
+#' (e.g. genes encoding for ribosomal proteins) so we exoect their level to be
+#' high in all cells.
+#'
+#' @param x a numeric matrix or Matrix object.
+#' @param return_sorted should the result be returned sorted. Default is FALSE.
+#' @param cell_subset a vector of cell IDs for which the HK expression should be
+#' calculated. Default is NULL.
+#' @param custom_hk a vector containing gene IDs which represent the housekeeping
+#' genes. If \code{NULL} (the default) then \link{SCANDAL_HOUSEKEEPING_GENES_LIST} will be used.
+#' @log Should the result be retruned in log2 space. Default is TRUE.
+#' @param verbose suppresses all messages from this function. Default is FALSE.
+#'
+#' @return A named vector of complexity per cell ID.
+#'
+#' @author Avishay Spitzer
+#'
+#' @export
+compute_housekeeping <- function(x, return_sorted = FALSE, cell_subset = NULL, custom_hk = NULL, log = TRUE, verbose = FALSE) {
+
+  stopifnot(is_valid_assay(x), is.logical(return_sorted), (is.null(cell_subset) | is.vector(cell_subset)), (is.null(custom_hk) | is.vector(custom_hk)), is.logical(log))
+
+  if (!is.null(cell_subset))
+    x <- x[, cell_subset]
+
+  if (is.null(custom_hk))
+    g <- rownames(x)[rownames(x) %in% SCANDAL_HOUSEKEEPING_GENES_LIST]
+  else
+    g <- rownames(x)[rownames(x) %in% custom_hk]
+
+  h <- base::apply(x[g, ], 2, mean)
+
+  if(isTRUE(return_sorted)) {
+    h <- base::sort(h)
+  }
+
+  if (isTRUE(log))
+    h <- base::log2(h + 1)
+
+  return (h)
+}
+
+#'
 #' @title Centers a matrix
 #'
 #' @description Centers the mean/median of each row/column of the given matrix
@@ -448,7 +494,7 @@ filter_low_housekeeping_cells <- function(x, housekeeping_cutoff, verbose = FALS
   passQC <- hk_mean_exp[hk_mean_exp >= housekeeping_cutoff]
 
   if (isTRUE(verbose))
-    message(sprintf("Housekeeping cutoff %d, %d cells pre-QC, %d cells passed QC, %2.0f%% of cells dropped",
+    message(sprintf("Housekeeping cutoff %.2f, %d cells pre-QC, %d cells passed QC, %2.0f%% of cells dropped",
                     housekeeping_cutoff,
                     length(hk_mean_exp),
                     length(passQC),
