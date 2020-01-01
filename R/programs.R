@@ -5,6 +5,89 @@
 ###
 
 #'
+#' @author Avishay Spitzer
+#'
+#' @export
+scandal_metaprograms <- function(object, nmf_data, samples = NULL, n_features = 500, maxK = 10, reps = 1000, distance = "euclidean") {
+
+  features <- .features(nmf_data, n_features)
+
+  mcs <- .mcs(nmf_data)
+
+  l2r <- .l2r(object, samples, features, mcs)
+
+  # Compute the pairwise correlations between L2R vectors
+  cor <- cor(l2r)
+
+  # compute the consensus clustering with 1-cor as the distance metric
+  ccp <- ConsensusClusterPlus::ConsensusClusterPlus(d = 1 - cor, maxK = maxK, reps = reps, distance = distance)
+  icl <- ConsensusClusterPlus::calcICL(ccp)
+
+  # Compute the cluster consensus and item consensus scores for each cluster
+  cons_k <- left_join(as_tibble(icl$clusterConsensus) %>% group_by(k) %>% summarise(CC = mean(clusterConsensus, na.rm = TRUE)),
+                      as_tibble(icl$itemConsensus) %>% group_by(item, k) %>% summarise(MIC = max(itemConsensus)) %>% group_by(k) %>% summarise(IC = mean(MIC, na.rm = TRUE)),
+                      by = "k")
+
+  # If CC and IC scores agree on the same cluster then this is chosen as the best K (number of program clusters)
+  if (which.max(cons_k$CC) == which.max(cons_k$IC))
+    best_k <- cons_k$k[which.max(cons_k$CC)]
+  else
+    best_k <- NA
+
+  # Package all the products of phase 1 in a list
+  res <- list(L2R = l2r, COR = cor, CCP = ccp, ICL = icl, CONS_SCORE = cons_k, BEST_K = best_k)
+
+  return (res)
+}
+
+.features <- function(nmf_data, n_features) {
+
+  # Pull genes from top N features for each factor in each sample
+  genes <- lapply(nmf_data, function(d) {
+    fs <- NMF::extractFeatures(d, method = n_features)
+    unique(unlist(lapply(fs, function(f) rownames(NMF::basis(d))[f]), recursive = FALSE))
+  })
+
+  # Pull all genes to a single vector
+  all_genes <- unique(unlist(lapply(genes, function(x) x), recursive = FALSE))
+
+  return (all_genes)
+}
+
+.mcs <- function(nmf_data) {
+
+  # Pull the maximal coefficients (e.g. the selected factor) for each cell
+  mcs <- lapply(nmf_data, function(d) {
+    setNames(paste0("P", apply(NMF::coefficients(d), 2, which.max)), colnames(NMF::coefficients(d)))
+  })
+
+  return (mcs)
+}
+
+.l2r <- function(object, samples, features, mcs) {
+
+  # Compute the L2R (log2 ratio) vector for each factor within each sample
+  l2rs <- lapply(samples, function(s) {
+
+    m <- center_matrix(as.matrix(assay(object)[features, colnames(s)]))
+    mc <- mcs[[nodeID(s)]]
+
+    l2r <- setNames(lapply(unique(mc), function(p) {
+      g1 <- names(mc[mc %in% p])
+      g2 <- names(mc[!(mc %in% p)])
+      rowMeans(m[, g1]) - rowMeans(m[, g2])
+    }), paste0(nodeID(s), ".", unique(mc)))
+    l2r <- as.matrix(as.data.frame(l2r))
+    l2r
+  })
+
+  # Bind all L2R vectors as a single matrix
+  l2r <- do.call(cbind, l2rs)
+
+  return (l2r)
+}
+
+#'
 #' @title Programs of intra-sample heterogeneity
 #'
 #' @description This function extracts transpriptomic programs
