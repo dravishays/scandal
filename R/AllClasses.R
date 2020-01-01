@@ -953,30 +953,144 @@ DEFAULT_CELL_2_NODE_MAP <- function(cell_ids) {
 ###
 
 ### =========================================================================
-### ScandalResults objects (start)
+### ScandalMetaprograms objects (start)
 ### -------------------------------------------------------------------------
 ###
 
+#'
+#' @importFrom S4Vectors SimpleList
+#' @importFrom S4Vectors DataFrame
+#'
 #' @export
-#' @exportClass ScandalResults
-setClass("ScandalResults",
-         slots = c(samples = "SimpleList", # List of ScandalDataSet objects
-                   wsClusteringData = "SimpleList", # List of within-sample clustering data (e.g. NMF objects)
-                   wsPrograms = "SimpleList", # List of lists representing within-sample programs (vectors of gene symbols)
-                   wsScores = "SimpleList", # List of matrices representing the program scores within each sample
-                   wsScoreSDs = "SimpleList", # List of vectors representing the standard deviation of program scores within each sample
-                   bsScores = "matrix",
-                   variablePrograms = "SimpleList",
-                   programClusters = "SimpleList",
-                   geneScores = "matrix",
-                   mpScores = "SimpleList",
-                   thresholdSD = "numeric", # Minimal SD below which programs are filtered out
+#' @exportClass ScandalMetaprograms
+setClass("ScandalMetaprograms",
+         slots = c(l2R = "matrix", # Log2-ratio matrix, genes in rows, each column represents a program that came from a specific sample
+                   corL2R = "matrix", # Pairwise correlation matrix computed on the L2R matrix
+                   consensusClusters = "SimpleList", # List with the consensus clustering data
+                   mpL2R = "SimpleList", # List of L2R vectors for each meta program
+                   metaprograms = "SimpleList", # List of vectors of gene symbols
+                   mpScores = "matrix", # Matrix of scores (rows - cell IDs, columns - meta programs)
+                   mpAssigned = "character", # Vector of MP assignment for each cell
+                   mpMap = "character", # Named vector that maps each MP to a name representing the MP (e.g. Cell Cycle, AC etc.)
+                   scoringStrategy = "character",
+                   scoreThreshold = "numeric",
                    nodeID = "character",
                    projectID = "character"),
-         contains = "DataFrame"
-)
+         contains = "DataFrame")
+
+### - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+### Constructor
+###
+
+#'
+#' @importClassesFrom S4Vectors DataFrame SimpleList
+#' @importFrom S4Vectors SimpleList
+#' @importFrom S4Vectors DataFrame
+#' @importFrom methods new is as
+#'
+#' @export
+ScandalMetaprograms <- function(..., l2R, corL2R, consensusClusters, mpL2R, metaprograms, mpScores, mpAssigned, mpMap, scoringStrategy, scoreThreshold, nodeID, projectID) {
+
+  if (is.null(mpMap))
+    mpMap <- stats::setNames(object = names(metaprograms), nm = names(metaprograms))
+
+  df <- as.data.frame(lapply(1:length(metaprograms), function(x) setNames(list(metaprograms[[x]],
+                                                                               mpL2R[[x]][metaprograms[[x]]]),
+                                                                          c(paste0("MP", x), paste0("MP", x, ".L2R")))))
+
+  df <- DataFrame(..., df, row.names = NULL, stringsAsFactors = FALSE)
+
+  object <- new("ScandalMetaprograms", df,
+                l2R = l2R,
+                corL2R = corL2R,
+                consensusClusters = as(consensusClusters, "SimpleList"),
+                mpL2R = as(mpL2R, "SimpleList"),
+                metaprograms = as(metaprograms, "SimpleList"),
+                mpScores = mpScores,
+                mpAssigned = mpAssigned,
+                mpMap = mpMap,
+                scoringStrategy = scoringStrategy,
+                scoreThreshold = scoreThreshold,
+                nodeID = nodeID,
+                projectID = projectID)
+
+  return (object)
+}
+
+### - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+### Validity
+###
+
+setValidity("ScandalMetaprograms", function(object) {
+
+  # if (length(qualityControl(object)) > 0) {
+  #
+  #   is_qc_valid <- sapply(qualityControl(object), function(c) is(c, "QCResults"))
+  #
+  #   if (!(base::all(is_qc_valid) == TRUE))
+  #     return (sprintf("Every QC node must be a QCResults object"))
+  # }
+
+  return (TRUE)
+})
+
+#'
+#' @rdname ScandalMetaprograms
+#'
+#' @export
+setMethod("mpMap", "ScandalMetaprograms",   function(object, ...) {
+  return (object@mpMap)
+})
+
+#'
+#' @param object a \code{ScandalMetaprograms} object.
+#' @param value a value to replace the currently set value (applies to all setter methods).
+#'
+#' @rdname ScandalMetaprograms
+#'
+#' @export
+setReplaceMethod("mpMap", c("ScandalMetaprograms", "ANY"),   function(object, ..., value) {
+  stopifnot(!is.null(value))
+  stopifnot(is.character(value))
+  stopifnot(length(value) == length(object@metaprograms))
+  stopifnot(names(value) == names(object@metaprograms))
+
+  object@mpMap <- value
+
+  colnames(object) <- unlist(lapply(strsplit(colnames(object), split = "\\."), function(x) ifelse(length(x) == 1, value[x[[1]]], paste0(value[x[[1]]], ".", x[[2]]))), recursive = FALSE)
+
+  return (object)
+})
+
+#'
+#' @rdname ScandalMetaprograms
+#'
+#' @export
+setMethod("mpScores", "ScandalMetaprograms",   function(object, ..., as_tibble = FALSE) {
+
+  if (isTRUE(as_tibble))
+    res <- tibble::as_tibble(object@mpScores, rownames = "CellID")
+  else
+    res <- object@mpScores
+
+  return (res)
+})
+
+#'
+#' @rdname ScandalMetaprograms
+#'
+#' @export
+setMethod("metaPrograms", "ScandalMetaprograms",   function(object, ..., as_tibble = FALSE) {
+
+  if (isTRUE(as_tibble))
+    res <- tibble::as_tibble(object@metaprograms)
+  else
+    res <- object@metaprograms
+
+  return (res)
+})
 
 ### -------------------------------------------------------------------------
-### ScandalResults objects (end)
+### ScandalMetaprograms objects (end)
 ### =========================================================================
 ###

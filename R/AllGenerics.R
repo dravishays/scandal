@@ -182,3 +182,37 @@ setGeneric("statsQC", function(object, ...) standardGeneric("statsQC"))
 #'
 #' @export
 setGeneric("statsQC<-", function(object, ..., value) standardGeneric("statsQC<-"))
+
+### =========================================================================
+### Genercis for class ScandalMetaprograms
+### -------------------------------------------------------------------------
+###
+
+#'
+#' @title ScandalMetaprograms generics
+#'
+#' @rdname ScandalMetaprograms-generics
+#'
+#' @export
+setGeneric("mpMap", function(object, ...) standardGeneric("mpMap"))
+
+#' @rdname ScandalMetaprograms-generics
+#'
+#' @export
+setGeneric("mpMap<-", function(object, ..., value) standardGeneric("mpMap<-"))
+
+#'
+#' @title ScandalMetaprograms generics
+#'
+#' @rdname ScandalMetaprograms-generics
+#'
+#' @export
+setGeneric("mpScores", function(object, ..., as_tibble = FALSE) standardGeneric("mpScores"))
+
+#'
+#' @title ScandalMetaprograms generics
+#'
+#' @rdname ScandalMetaprograms-generics
+#'
+#' @export
+setGeneric("metaPrograms", function(object, ..., as_tibble = FALSE) standardGeneric("metaPrograms"))

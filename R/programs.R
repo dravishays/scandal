@@ -8,39 +8,154 @@
 #' @author Avishay Spitzer
 #'
 #' @export
-scandal_metaprograms <- function(object, nmf_data, samples = NULL, n_features = 500, maxK = 10, reps = 1000, distance = "euclidean") {
+scandal_metaprograms <- function(object, nmf_data, samples = NULL, n_features = 500,
+                                 cc_res = NULL, maxK = 10, reps = 1000, distance = "euclidean",
+                                 n_mp_genes = 50, mpss = "ws", score_threshold = .5, verbose = FALSE) {
 
-  features <- .features(nmf_data, n_features)
+  stopifnot(is_scandal_object(object))
+  stopifnot(!is.null(nmf_data))
+  stopifnot(mpss %in% c("ws", "bs"))
 
-  mcs <- .mcs(nmf_data)
+  .msg("Computing meta-programs", verbose = verbose)
 
-  l2r <- .l2r(object, samples, features, mcs)
+  if (is.null(samples))
+    samples <- prepare_samples(object = object, verbose = verbose)
+
+  # Extract the top features from all samples
+  features <- .features(object = object, nmf_data = nmf_data, n_features = n_features, verbose = verbose)
+
+  # Extract the within-sample cluster (maximal coefficient/factor) of each cell
+  mcs <- .mcs(nmf_data = nmf_data, verbose = verbose)
+
+  # Compute the log2-ratio vector for each factor within each sample
+  l2r <- .l2r(object = object, samples = samples, features = features, mcs = mcs, verbose = verbose)
 
   # Compute the pairwise correlations between L2R vectors
-  cor <- cor(l2r)
+  cor_l2r <- cor(x = l2r, method = "pearson")
 
-  # compute the consensus clustering with 1-cor as the distance metric
-  ccp <- ConsensusClusterPlus::ConsensusClusterPlus(d = 1 - cor, maxK = maxK, reps = reps, distance = distance)
-  icl <- ConsensusClusterPlus::calcICL(ccp)
+  # Run consensus clustering on the L2R correlation matrix and find the best K (number of program clusters)
+  if (is.null(cc_res))
+    cc <- .consensus_cluster(cor_l2r = cor_l2r, maxK = maxK, reps = reps, distance = distance, verbose = verbose)
+  else {
+    .msg("Got Consensus Clustering result, skipping step", verbose = verbose)
+    cc <- cc_res
+  }
 
-  # Compute the cluster consensus and item consensus scores for each cluster
-  cons_k <- left_join(as_tibble(icl$clusterConsensus) %>% group_by(k) %>% summarise(CC = mean(clusterConsensus, na.rm = TRUE)),
-                      as_tibble(icl$itemConsensus) %>% group_by(item, k) %>% summarise(MIC = max(itemConsensus)) %>% group_by(k) %>% summarise(IC = mean(MIC, na.rm = TRUE)),
-                      by = "k")
+  # Plot the L2R correlation matrix
+  .plot_l2r_cor(cor_l2r = cor_l2r, ccp = cc$ccp[[cc$best_k]], clusters = cc$clusters)
 
-  # If CC and IC scores agree on the same cluster then this is chosen as the best K (number of program clusters)
-  if (which.max(cons_k$CC) == which.max(cons_k$IC))
-    best_k <- cons_k$k[which.max(cons_k$CC)]
-  else
-    best_k <- NA
+  # Compute the metaprograms by DE using the L2R vectors
+  mp_l2r <- .mp_l2r(l2r = l2r, clusters = cc$clusters, verbose = verbose)
 
-  # Package all the products of phase 1 in a list
-  res <- list(L2R = l2r, COR = cor, CCP = ccp, ICL = icl, CONS_SCORE = cons_k, BEST_K = best_k)
+  # Take the top N genes in each metaprogram
+  mps <- .metaprograms(mp_l2r = mp_l2r, n_mp_genes = n_mp_genes, verbose = verbose)
+
+  # score all metaprograms
+  mp_scores <- .score_mps(object = object, samples = samples, metaprograms = mps, mpss = mpss, verbose = verbose)
+
+  # Assign a metaprogram to each cell
+  amp <- .assign_mps(mp_scores = mp_scores, score_threshold = score_threshold, verbose = verbose)
+
+  #as.data.frame(mps)
+
+  # Package all the products
+  res <- list(l2r = l2r, cor_l2r = cor_l2r, cc = cc, mp_l2r = mp_l2r, mps = mps, mp_scores = mp_scores, amp = amp)
+
+  .msg("Done", verbose = verbose)
 
   return (res)
 }
 
-.features <- function(nmf_data, n_features) {
+#' @author Avishay Spitzer
+#'
+#' @importFrom stats setNames
+#'
+#' @export
+prepare_samples <- function(object, verbose = FALSE) {
+
+  if (isTRUE(verbose))
+    message("Generating individual samples")
+
+  samples <- setNames(lapply(sampleIDs(object), function(sname) {
+    sdata <- scandal_inspect_samples(object, sample_ids = sname, node_id = sname, verbose = verbose)
+    sdata <- scandal_setup_analysis(sdata, verbose = verbose)
+    return (sdata)
+  }), sampleIDs(object))
+
+  return (samples)
+}
+
+#' @author Avishay Spitzer
+#'
+#' @importFrom NMF nmf
+#'
+#' @export
+nmf_run <- function(samples, rank = 10, verbose = FALSE, ...) {
+
+  res <- list()
+
+  run_time <- 0
+
+  for (sname in names(samples)) {
+
+    sdata <- samples[[sname]]
+
+    m <- .nmf_matrix(sdata)
+
+    if (isTRUE(verbose))
+      message("Running NMF for ", sname)
+
+    nmf_res <- nmf(x = m, rank = rank, ...)
+
+    if (isTRUE(verbose))
+      message("Done - ", nmf_res@runtime[3], "s")
+
+    run_time <- run_time + nmf_res@runtime[3]
+
+    res[[sname]] <- nmf_res
+  }
+
+  if (isTRUE(verbose))
+    message("NMF done - overall runtime ", run_time, "s")
+
+  return (res)
+}
+
+#' @author Avishay Spitzer
+#'
+#' @importFrom stats setNames
+#'
+#' @export
+nmf_extract_programs <- function(nmf_data, n = 50, verbose = FALSE) {
+
+  if (isTRUE(verbose))
+    message("Extracting within-sample programs from NMF result")
+
+  programs <- setNames(lapply(names(nmf_data),
+                              function(sname) .extract_programs(.W(nmf_data[[sname]], sname), n = n)),
+                       names(nmf_data))
+
+  return (programs)
+}
+
+### -------------------------------------------------------------------------
+### Exported algorithm functions (end)
+### =========================================================================
+###
+
+### =========================================================================
+### Internal functions (start)
+### -------------------------------------------------------------------------
+###
+
+.msg <- function(str, verbose = verbose) {
+  if (isTRUE(verbose))
+    message(str)
+}
+
+.features <- function(object, nmf_data, n_features, verbose) {
+
+  .msg(paste0("Pulling ", n_features, " top features from each NMF factor"), verbose = verbose)
 
   # Pull genes from top N features for each factor in each sample
   genes <- lapply(nmf_data, function(d) {
@@ -51,10 +166,17 @@ scandal_metaprograms <- function(object, nmf_data, samples = NULL, n_features = 
   # Pull all genes to a single vector
   all_genes <- unique(unlist(lapply(genes, function(x) x), recursive = FALSE))
 
+  .msg(sprintf("Pulled %d features (out of %d existing features) from %d NMF objects",
+               length(all_genes),
+               nrow(object),
+               length(nmf_data)), verbose = verbose)
+
   return (all_genes)
 }
 
-.mcs <- function(nmf_data) {
+.mcs <- function(nmf_data, verbose) {
+
+  .msg("Pulling maximal coefficient for each cell", verbose = verbose)
 
   # Pull the maximal coefficients (e.g. the selected factor) for each cell
   mcs <- lapply(nmf_data, function(d) {
@@ -64,7 +186,9 @@ scandal_metaprograms <- function(object, nmf_data, samples = NULL, n_features = 
   return (mcs)
 }
 
-.l2r <- function(object, samples, features, mcs) {
+.l2r <- function(object, samples, features, mcs, verbose) {
+
+  .msg("Computing L2R vector for each NMF factor (within sample)", verbose = verbose)
 
   # Compute the L2R (log2 ratio) vector for each factor within each sample
   l2rs <- lapply(samples, function(s) {
@@ -86,6 +210,142 @@ scandal_metaprograms <- function(object, nmf_data, samples = NULL, n_features = 
 
   return (l2r)
 }
+
+.consensus_cluster <- function(cor_l2r, maxK, reps, distance, verbose) {
+
+  .msg("Clustering the L2R pairwise correlation matrix", verbose = verbose)
+
+  # Compute the consensus clustering with 1-cor as the distance object
+  ccp <- ConsensusClusterPlus::ConsensusClusterPlus(d = 1 - cor_l2r, maxK = maxK, reps = reps, distance = distance)
+  icl <- ConsensusClusterPlus::calcICL(ccp)
+
+  # Compute the cluster consensus and item consensus scores for each cluster
+  ccs <- left_join(as_tibble(icl$clusterConsensus) %>% group_by(k) %>% summarise(CC = mean(clusterConsensus, na.rm = TRUE)),
+                   as_tibble(icl$itemConsensus) %>% group_by(item, k) %>% summarise(MIC = max(itemConsensus)) %>% group_by(k) %>% summarise(IC = mean(MIC, na.rm = TRUE)),
+                   by = "k")
+
+  # If CC and IC scores agree on the same cluster then this is chosen as the best K (number of program clusters)
+  if (which.max(ccs$CC) == which.max(ccs$IC))
+    best_k <- ccs$k[which.max(ccs$CC)]
+  else {
+    best_k <- ccs$k[which.max(ccs$CC)]
+
+    .msg("No agreement between Item and Cluster Consensus scores - using Cluster Consensus score to set best K. It is adviseabele to review the clustering results", verbose = verbose)
+  }
+
+  .msg(paste0("Best K set to ", best_k), verbose = verbose)
+
+  clusters <- ccp[[best_k]]$consensusClass
+
+  res <- list(ccp = ccp, icl = icl, ccs = ccs, best_k = best_k, clusters = clusters)
+
+  return (res)
+}
+
+.plot_l2r_cor <- function(cor_l2r, ccp, clusters) {
+
+  h <- Heatmap(cor_l2r,
+               col = circlize::colorRamp2(c(-0.5, -0.25, 0, 0.25, 0.5), c("dodgerblue", "lightblue", "white", "red" ,"darkred")),
+               heatmap_legend_param = list(title = "Pearson\ncorrelation", at = c(-0.5, -0.25, 0, 0.25, 0.5), labels = c("-0.5", "", "0", "", "0.5")),
+               cluster_rows = ccp$consensusTree, cluster_columns = ccp$consensusTree,
+               column_title = "Program pairwise correlation", column_title_side = "top", column_title_gp = gpar(fontsize = 20, fontface = "bold"),
+               show_row_names = FALSE, show_column_names = FALSE, row_names_gp = gpar(fontsize = 7, fontface = "bold"),
+               top_annotation = HeatmapAnnotation(Cluster = as.character(clusters),
+                                                  col = list(Cluster = setNames(scales::hue_pal()(length(unique(clusters))), unique(clusters))),
+                                                  show_annotation_name = FALSE))
+
+  draw(h)
+
+  invisible(NULL)
+}
+
+.mp_l2r <- function(l2r, clusters, verbose) {
+
+  .msg("Computing the metaprogram L2R vectors", verbose = verbose)
+
+  # Compute the metaprograms by DE using the L2R vectors
+  mp_l2r <- setNames(lapply(unique(clusters), function(i) {
+
+    prgs <- names(clusters[clusters == i])
+
+    sample_l2r <- l2r[, prgs]
+    ref_l2r <- l2r[, !colnames(l2r) %in% prgs]
+
+    if (!is.null(dim(sample_l2r)))
+      res <- rowMeans(sample_l2r) - rowMeans(ref_l2r)
+    else
+      res <- sample_l2r - rowMeans(ref_l2r)
+
+    #res <- sort(res, decreasing = TRUE)
+
+    return (res)
+  }), paste0("MP", unique(clusters)))
+
+  return (mp_l2r)
+}
+
+.metaprograms <- function(mp_l2r, n_mp_genes, verbose) {
+
+  .msg(paste0("Extracting the metaprogram genes (the top ", n_mp_genes, " genes)"), verbose = verbose)
+  # Take the top N genes in each metaprogram
+  mps <- setNames(lapply(mp_l2r, function(x) names(head(sort(x, decreasing = TRUE), n = n_mp_genes))), names(mp_l2r))
+
+  return(mps)
+}
+
+.score_mps <- function(object, samples, metaprograms, mpss, verbose) {
+
+  if (mpss == "ws") {
+
+    .msg("Scoring cells for the metaprograms within samples", verbose = verbose)
+
+    # score all metaprograms within sample
+    mp_scores <- lapply(samples, function(s) {
+      m <- as.matrix(assay(object))[, colnames(s)]
+      scalop::score(mat = center_matrix(m), groups = metaprograms, binmat = m, bin.control = TRUE, center = FALSE)
+    })
+    mp_scores <- do.call(rbind, mp_scores)
+    mp_scores <- mp_scores[colnames(object), ]
+  } else {
+
+    .msg("Scoring cells for the metaprograms between samples", verbose = verbose)
+
+    # score all metaprograms between samples
+    m <- as.matrix(assay(object))
+
+    mp_scores <- scalop::score(mat = center_matrix(m), groups = metaprograms, binmat = m, bin.control = TRUE, center = FALSE)
+  }
+
+  return (mp_scores)
+}
+
+.assign_mps <- function(mp_scores, score_threshold, verbose) {
+
+  .msg(paste0("Assigning metaprograms with score threshold ", score_threshold), verbose = verbose)
+
+  # Assign a metaprogram to each cell
+  amp <- apply(mp_scores, 1, function(x) {
+    ms <- which.max(x)
+    ifelse(x[ms] >= score_threshold, paste0("MP", ms), "NA")
+  })
+
+  .msg(sprintf("Assigned MP to %d/%d of cells, NA rate %.2f",
+               length(which(amp != "NA")),
+                      length(amp),
+                      length(which(amp == "NA")) / length(amp)), verbose = verbose)
+
+  return (amp)
+}
+
+### -------------------------------------------------------------------------
+### Internal functions (end)
+### =========================================================================
+###
+
+### =========================================================================
+### Old version of the algorithm, will not be exported anymore (start)
+### -------------------------------------------------------------------------
+###
 
 #'
 #' @title Programs of intra-sample heterogeneity
@@ -141,8 +401,6 @@ scandal_metaprograms <- function(object, nmf_data, samples = NULL, n_features = 
 #' @seealso
 #'
 #' @author Avishay Spitzer
-#'
-#' @export
 scandal_programs_of_intra_sample_heterogeneity <- function(object, samples = NULL, clustering_data = NULL,
                                                            algorithm = "nmf", rank = 10, ngenes1 = 50, ngenes2 = 30, sd_threshold = 0.8, filter_method = "relative",
                                                            n_clusters_min = 2, n_clusters_max = 10,
@@ -223,81 +481,7 @@ scandal_programs_of_intra_sample_heterogeneity <- function(object, samples = NUL
 
 #' @author Avishay Spitzer
 #'
-#' @importFrom stats setNames
-#'
-#' @export
-prepare_samples <- function(object, verbose = FALSE) {
-
-  if (isTRUE(verbose))
-    message("Generating individual samples")
-
-  samples <- setNames(lapply(sampleIDs(object), function(sname) {
-    sdata <- scandal_inspect_samples(object, sample_ids = sname, node_id = sname, verbose = verbose)
-    sdata <- scandal_setup_analysis(sdata, verbose = verbose)
-    return (sdata)
-  }), sampleIDs(object))
-
-  return (samples)
-}
-
-#' @author Avishay Spitzer
-#'
-#' @importFrom NMF nmf
-#'
-#' @export
-nmf_run <- function(samples, rank = 10, verbose = FALSE, ...) {
-
-  res <- list()
-
-  run_time <- 0
-
-  for (sname in names(samples)) {
-
-    sdata <- samples[[sname]]
-
-    m <- .nmf_matrix(sdata)
-
-    if (isTRUE(verbose))
-      message("Running NMF for ", sname)
-
-    nmf_res <- nmf(x = m, rank = rank, ...)
-
-    if (isTRUE(verbose))
-      message("Done - ", nmf_res@runtime[3], "s")
-
-    run_time <- run_time + nmf_res@runtime[3]
-
-    res[[sname]] <- nmf_res
-  }
-
-  if (isTRUE(verbose))
-    message("NMF done - overall runtime ", run_time, "s")
-
-  return (res)
-}
-
-#' @author Avishay Spitzer
-#'
-#' @importFrom stats setNames
-#'
-#' @export
-nmf_extract_programs <- function(nmf_data, n = 50, verbose = FALSE) {
-
-  if (isTRUE(verbose))
-    message("Extracting within-sample programs from NMF result")
-
-  programs <- setNames(lapply(names(nmf_data),
-                              function(sname) .extract_programs(.W(nmf_data[[sname]], sname), n = n)),
-                         names(nmf_data))
-
-  return (programs)
-}
-
-#' @author Avishay Spitzer
-#'
 #' @importFrom scalop score
-#'
-#' @export
 score_within_samples <- function(samples, ws_programs, bin_control = TRUE, n_control_bins = 25, n_bin_genes = 100, ..., verbose = FALSE) {
 
   if (isTRUE(verbose))
@@ -324,8 +508,6 @@ score_within_samples <- function(samples, ws_programs, bin_control = TRUE, n_con
 #' @author Avishay Spitzer
 #'
 #' @importFrom matrixStats colSds
-#'
-#' @export
 compute_programs_sd <- function(ws_scores, verbose = FALSE) {
 
   if (isTRUE(verbose))
@@ -344,8 +526,6 @@ compute_programs_sd <- function(ws_scores, verbose = FALSE) {
 }
 
 #' @author Avishay Spitzer
-#'
-#' @export
 within_sample_variable_programs <- function(ws_score_sd, ws_programs, sd_threshold, filter_method = "relative", verbose = FALSE) {
 
   if (isTRUE(verbose))
@@ -366,8 +546,6 @@ within_sample_variable_programs <- function(ws_score_sd, ws_programs, sd_thresho
 #' @author Avishay Spitzer
 #'
 #' @importFrom scalop score
-#'
-#' @export
 score_between_samples <- function(x, programs, bin_control = TRUE, n_control_bins = 25, n_bin_genes = 100, ..., verbose = FALSE) {
 
   if (isTRUE(verbose))
@@ -385,8 +563,6 @@ score_between_samples <- function(x, programs, bin_control = TRUE, n_control_bin
 #' @author Avishay Spitzer
 #'
 #' @importFrom ConsensusClusterPlus ConsensusClusterPlus calcICL
-#'
-#' @export
 cluster_variable_programs <- function(bs_scores, n_clusters_min = 2, n_clusters_max = 10, verbose = FALSE) {
 
   if (isTRUE(verbose))
@@ -413,8 +589,6 @@ cluster_variable_programs <- function(bs_scores, n_clusters_min = 2, n_clusters_
 }
 
 #' @author Avishay Spitzer
-#'
-#' @export
 nmf_score_genes <- function(nmf_data, variable_programs, program_clusters, verbose = FALSE) {
 
   if (isTRUE(verbose))
@@ -461,8 +635,6 @@ nmf_score_genes <- function(nmf_data, variable_programs, program_clusters, verbo
 }
 
 #' @author Avishay Spitzer
-#'
-#' @export
 metaprograms <- function(gene_scores, n_sig_genes = 30, verbose = FALSE) {
 
   if (isTRUE(verbose))
@@ -477,8 +649,6 @@ metaprograms <- function(gene_scores, n_sig_genes = 30, verbose = FALSE) {
 }
 
 #' @author Avishay Spitzer
-#'
-#' @export
 assign_metaprograms <- function(metaprogram_scores, verbose = FALSE) {
 
   max_scores <- apply(metaprogram_scores, 1, which.max)
@@ -488,21 +658,9 @@ assign_metaprograms <- function(metaprogram_scores, verbose = FALSE) {
   return(max_scores)
 }
 
-### -------------------------------------------------------------------------
-### Exported algorithm functions (end)
-### =========================================================================
-###
-
-### =========================================================================
-### Exported plotting functions (start)
-### -------------------------------------------------------------------------
-###
-
 #' @author Avishay Spitzer
 #'
 #' @importFrom reshape2 melt
-#'
-#' @export
 scandal_programs_sd_plot <- function(ws_score_sd, sd_threshold = 0.5, title = NULL) {
 
   df <- as.data.frame(ws_score_sd)
@@ -523,8 +681,6 @@ scandal_programs_sd_plot <- function(ws_score_sd, sd_threshold = 0.5, title = NU
 #'
 #' @importFrom stats cor
 #' @importFrom scales hue_pal
-#'
-#' @export
 scandal_program_clusters_plot <- function(bs_scores, program_clusters) {
 
   prog_cor <- cor(bs_scores, use = "all.obs", method = "pearson")
@@ -540,16 +696,6 @@ scandal_program_clusters_plot <- function(bs_scores, program_clusters) {
 
   return (p)
 }
-
-### -------------------------------------------------------------------------
-### Exported plotting functions (end)
-### =========================================================================
-###
-
-### =========================================================================
-### Internal functions (start)
-### -------------------------------------------------------------------------
-###
 
 # Convenience method for transforming an expression matrix in logTPM units to a mtrxi compatible with
 # running the NMF algorithm
@@ -575,6 +721,6 @@ scandal_program_clusters_plot <- function(bs_scores, program_clusters) {
 }
 
 ### -------------------------------------------------------------------------
-### Internal functions (end)
+### Old version of the algorithm, will not be exported anymore (end)
 ### =========================================================================
 ###
