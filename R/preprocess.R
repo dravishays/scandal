@@ -6,6 +6,8 @@
 #'
 #' @param filename the name of the file containing the dataset (in tab-delimited
 #' format).
+#' @param type either tsv (tab-delimited text file) or rds (binary R data file).
+#' Default is tsv.
 #' @param cell_2_node_map a **function** that maps a vector of cell IDs to a vector of
 #' node IDs to which the cells belong. The default function assumes that the cell ID
 #' is a string separated by "-" and that the node ID is contained in the substring
@@ -30,25 +32,30 @@
 #' @author Avishay Spitzer
 #'
 #' @export
-load_dataset <- function(filename, cell_2_node_map = DEFAULT_CELL_2_NODE_MAP, drop_cols = 1, rownames_col = 1, excluded_samples = NULL, as_Matrix = TRUE, verbose = FALSE) {
+load_dataset <- function(filename, type = "tsv", cell_2_node_map = DEFAULT_CELL_2_NODE_MAP, drop_cols = 1, rownames_col = 1, excluded_samples = NULL, as_Matrix = TRUE, verbose = FALSE) {
 
   stopifnot(is.character(filename), base::file.exists(filename))
   stopifnot(is.function(cell_2_node_map))
   stopifnot(is.integer(drop_cols), is.integer(rownames_col), drop_cols > 0, rownames_col > 0)
   stopifnot(is.null(excluded_samples) | (is.vector(excluded_samples) & is.character(excluded_samples)))
   stopifnot(is.logical(as_Matrix))
+  stopifnot(type %in% c("tsv", "rds"))
 
   if (isTRUE(verbose))
     message("Loading dataset from ", filename)
 
-  dataset <- utils::read.delim(filename, header = TRUE, sep = '\t', stringsAsFactors = FALSE)
+  if (type == "tsv") {
+    dataset <- utils::read.delim(filename, header = TRUE, sep = '\t', stringsAsFactors = FALSE)
 
-  #tpm_data[, rownames_col][c(11570, 11573)] <- c("MARCH1", "MARCH2")
-  rownames(dataset) <- dataset[, rownames_col]
+    #tpm_data[, rownames_col][c(11570, 11573)] <- c("MARCH1", "MARCH2")
+    rownames(dataset) <- dataset[, rownames_col]
 
-  dataset <- dataset[, -seq_len(drop_cols)]
+    dataset <- dataset[, -seq_len(drop_cols)]
 
-  colnames(dataset) <- base::gsub("\\.", "-", colnames(dataset))
+    colnames(dataset) <- base::gsub("\\.", "-", colnames(dataset))
+  } else if (type == "rds") {
+    dataset <- base::readRDS(file = filename)
+  }
 
   if (isTRUE(verbose))
     message("Loaded dataset with ", nrow(dataset), " rows and ", ncol(dataset), " columns")

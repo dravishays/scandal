@@ -958,17 +958,71 @@ DEFAULT_CELL_2_NODE_MAP <- function(cell_ids) {
 ###
 
 #'
-#' @importFrom S4Vectors SimpleList
+#' @title ScandalMetaprograms class
+#'
+#' @description An S4 class for storing single-cell seqeuncing data, reduced
+#' dimensions representations of the data reuqired in the analysis process such as
+#' t-SNE and UMAP coordinates and the end-product of the analysis which are the
+#' transcriptional programs.
+#'
+#' @details The S4 class \code{ScandalDataSet} inherits from and extends Bioconductor's
+#' base class for single-cell related applications, the \linkS4class{SingleCellExperiment}
+#' class.
+#' The idea behind \link{scandal} is that in order to detect intra-tumor heterogeneity
+#' one needs inspect each tumor individually to collect the different transcriptomic
+#' programs that can be found within each tumor and then assess these programs at the
+#' level of the entire dataset to define the programs that generalize best
+#' (meta-programs).
+#' Besides the functionality supplied by its superclasses, \code{ScandalDataSet}
+#' supplies methods to keep
+#'
+#' @slot l2R
+#' @slot corL2R
+#' @slot consensusClusters
+#' @slot mpL2R
+#' @slot metaPrograms
+#' @slot mpScores
+#' @slot mpAssigned
+#' @slot mpMap
+#' @slot scoringStrategy
+#' @slot scoreThreshold
+#' @slot nodeID
+#' @slot projectID
+#'
+#' @section Constructor:
+#' Constructs a \code{ScandalMetaprograms} object.
+#'
+#' @section Methods:
+#' \describe{
+#'   \item{\code{l2R}}{Getter for the l2R matrix}
+#'   \item{\code{corL2R}}{Getter for the corL2R matrix}
+#'   \item{\code{consensusClusters}}{Getter for the consensusClusters}
+#'   \item{\code{mpL2R}}{Getter for the mpL2R list}
+#'   \item{\code{metaPrograms}}{Getter for the metaPrograms list}
+#'   \item{\code{mpScores}}{Getter for the mpScores matrix}
+#'   \item{\code{mpAssigned}}{Getter for the mpAssigned vector}
+#'   \item{\code{mpMap}}{Getter/setter for the mpMap list}
+#'   \item{\code{scoringStrategy}}{Getter for the scoringStrategy}
+#'   \item{\code{scoreThreshold}}{Getter for the scoreThreshold}
+#'   \item{\code{nodeID}}{Getter for the nodeID}
+#'   \item{\code{projectID}}{Getter for the projectID}
+#' }
+#'
+#' @rdname ScandalMetaprograms
+#'
+#' @author Avishay Spitzer
+#'
 #' @importFrom S4Vectors DataFrame
 #'
 #' @export
 #' @exportClass ScandalMetaprograms
 setClass("ScandalMetaprograms",
-         slots = c(l2R = "matrix", # Log2-ratio matrix, genes in rows, each column represents a program that came from a specific sample
+         slots = c(# Add WS programs
+                   l2R = "matrix", # Log2-ratio matrix, genes in rows, each column represents a program that came from a specific sample
                    corL2R = "matrix", # Pairwise correlation matrix computed on the L2R matrix
-                   consensusClusters = "SimpleList", # List with the consensus clustering data
-                   mpL2R = "SimpleList", # List of L2R vectors for each meta program
-                   metaprograms = "SimpleList", # List of vectors of gene symbols
+                   consensusClusters = "list", # List with the consensus clustering data
+                   mpL2R = "list", # List of L2R vectors for each meta program
+                   metaPrograms = "list", # List of vectors of gene symbols
                    mpScores = "matrix", # Matrix of scores (rows - cell IDs, columns - meta programs)
                    mpAssigned = "character", # Vector of MP assignment for each cell
                    mpMap = "character", # Named vector that maps each MP to a name representing the MP (e.g. Cell Cycle, AC etc.)
@@ -982,30 +1036,59 @@ setClass("ScandalMetaprograms",
 ### Constructor
 ###
 
+#  Will be added by Roxygen to the class documentation
+
+#' @usage
+#' ## Constructor
+#' ScandalMetaprograms(...)
 #'
-#' @importClassesFrom S4Vectors DataFrame SimpleList
-#' @importFrom S4Vectors SimpleList
+#' @param ... arguments to pass to the \linkS4class{DataFrame} constructor.
+#' @param l2R
+#' @param corL2R
+#' @param consensusClusters
+#' @param mpL2R
+#' @param metaPrograms
+#' @param mpScores
+#' @param mpAssigned
+#' @param mpMap
+#' @param scoringStrategy
+#' @param scoreThreshold
+#' @param nodeID a unique identifier of the constructed \code{ScandalDataSet}
+#' object that should represent the specific sample. If not supplied a unique ID
+#' will be generated randomly however it is advised to set this field.
+#' @param projectID an identifier common to all the nodes in the constructed
+#' \code{ScandalDataSet} object.  If not supplied a unique ID
+#' will be generated randomly however it is advised to set this field.
+#'
+#' @importClassesFrom S4Vectors DataFrame
 #' @importFrom S4Vectors DataFrame
 #' @importFrom methods new is as
 #'
 #' @export
-ScandalMetaprograms <- function(..., l2R, corL2R, consensusClusters, mpL2R, metaprograms, mpScores, mpAssigned, mpMap, scoringStrategy, scoreThreshold, nodeID, projectID) {
+ScandalMetaprograms <- function(..., l2R, corL2R, consensusClusters, mpL2R, metaPrograms, mpScores, mpAssigned, mpMap, scoringStrategy, scoreThreshold, nodeID, projectID) {
 
   if (is.null(mpMap))
-    mpMap <- stats::setNames(object = names(metaprograms), nm = names(metaprograms))
+    mpMap <- c(stats::setNames(object = names(metaPrograms), nm = names(metaPrograms)), c("NA" = "NA"))
 
-  df <- as.data.frame(lapply(1:length(metaprograms), function(x) setNames(list(metaprograms[[x]],
-                                                                               mpL2R[[x]][metaprograms[[x]]]),
-                                                                          c(paste0("MP", x), paste0("MP", x, ".L2R")))))
+  stopifnot(!is.null(mpMap))
+  stopifnot(is.character(mpMap))
+  stopifnot(all(names(metaPrograms) %in% names(mpMap)) == TRUE)
 
-  df <- DataFrame(..., df, row.names = NULL, stringsAsFactors = FALSE)
+  df <- as.data.frame(lapply(1:length(metaPrograms), function(x) {
+    mp <- mpMap[paste0("MP", x)]
+    setNames(list(metaPrograms[[x]],
+                  mpL2R[[x]][metaPrograms[[x]]]),
+             c(mp, paste0(mp, ".L2R")))
+  }))
+
+  df <- DataFrame(..., df, row.names = NULL)
 
   object <- new("ScandalMetaprograms", df,
                 l2R = l2R,
                 corL2R = corL2R,
-                consensusClusters = as(consensusClusters, "SimpleList"),
-                mpL2R = as(mpL2R, "SimpleList"),
-                metaprograms = as(metaprograms, "SimpleList"),
+                consensusClusters = consensusClusters,
+                mpL2R = mpL2R,
+                metaPrograms = metaPrograms,
                 mpScores = mpScores,
                 mpAssigned = mpAssigned,
                 mpMap = mpMap,
@@ -1023,13 +1106,11 @@ ScandalMetaprograms <- function(..., l2R, corL2R, consensusClusters, mpL2R, meta
 
 setValidity("ScandalMetaprograms", function(object) {
 
-  # if (length(qualityControl(object)) > 0) {
-  #
-  #   is_qc_valid <- sapply(qualityControl(object), function(c) is(c, "QCResults"))
-  #
-  #   if (!(base::all(is_qc_valid) == TRUE))
-  #     return (sprintf("Every QC node must be a QCResults object"))
-  # }
+  if (all(object@mpAssigned %in% names(object@mpMap)) == FALSE)
+    return (sprintf("The names of mpMap element should contain all assigned MPs"))
+
+  if (all(c("ccp", "best_k") %in% names(object@consensusClusters)) == FALSE)
+    return (sprintf("consensusClusters must contain at least two element named ccp and best_k"))
 
   return (TRUE)
 })
@@ -1038,27 +1119,65 @@ setValidity("ScandalMetaprograms", function(object) {
 #' @rdname ScandalMetaprograms
 #'
 #' @export
-setMethod("mpMap", "ScandalMetaprograms",   function(object, ...) {
-  return (object@mpMap)
+setMethod("l2R", "ScandalMetaprograms",   function(object, ..., as_tibble = FALSE) {
+
+  if (isTRUE(as_tibble))
+    res <- tibble::as_tibble(object@l2R, rownames = "Gene")
+  else
+    res <- object@l2R
+
+  return (res)
 })
 
-#'
-#' @param object a \code{ScandalMetaprograms} object.
-#' @param value a value to replace the currently set value (applies to all setter methods).
 #'
 #' @rdname ScandalMetaprograms
 #'
 #' @export
-setReplaceMethod("mpMap", c("ScandalMetaprograms", "ANY"),   function(object, ..., value) {
-  stopifnot(!is.null(value))
-  stopifnot(is.character(value))
-  stopifnot(all(names(object@metaprograms) %in% names(value)) == TRUE)
+setMethod("corL2R", "ScandalMetaprograms",   function(object, ...) {
 
-  object@mpMap <- value
+  return (object@corL2R)
+})
 
-  colnames(object) <- unlist(lapply(strsplit(colnames(object), split = "\\."), function(x) ifelse(length(x) == 1, value[x[[1]]], paste0(value[x[[1]]], ".", x[[2]]))), recursive = FALSE)
+#'
+#' @rdname ScandalMetaprograms
+#'
+#' @export
+setMethod("consensusClusters", "ScandalMetaprograms",   function(object, ..., best = FALSE) {
 
-  return (object)
+  if (isFALSE(best))
+    res <- object@consensusClusters
+  else
+    res <- object@consensusClusters$ccp[[object@consensusClusters$best_k]]
+
+  return (res)
+})
+
+#'
+#' @rdname ScandalMetaprograms
+#'
+#' @export
+setMethod("mpL2R", "ScandalMetaprograms",   function(object, ..., as_tibble = FALSE) {
+
+  if (isTRUE(as_tibble))
+    res <- tibble::as_tibble(as.data.frame(object@mpL2R), rownames = "Gene")
+  else
+    res <- object@mpL2R
+
+  return (res)
+})
+
+#'
+#' @rdname ScandalMetaprograms
+#'
+#' @export
+setMethod("metaPrograms", "ScandalMetaprograms",   function(object, ..., as_tibble = FALSE) {
+
+  if (isTRUE(as_tibble))
+    res <- tibble::as_tibble(object@metaPrograms)
+  else
+    res <- object@metaPrograms
+
+  return (res)
 })
 
 #'
@@ -1079,14 +1198,73 @@ setMethod("mpScores", "ScandalMetaprograms",   function(object, ..., as_tibble =
 #' @rdname ScandalMetaprograms
 #'
 #' @export
-setMethod("metaPrograms", "ScandalMetaprograms",   function(object, ..., as_tibble = FALSE) {
+setMethod("mpAssigned", "ScandalMetaprograms",   function(object, ..., return_mapped = TRUE) {
 
-  if (isTRUE(as_tibble))
-    res <- tibble::as_tibble(object@metaprograms)
+  if (isTRUE(return_mapped))
+    res <- stats::setNames(object = object@mpMap[object@mpAssigned], nm = names(object@mpAssigned))
   else
-    res <- object@metaprograms
+    res <- object@mpAssigned
 
   return (res)
+})
+
+#'
+#' @rdname ScandalMetaprograms
+#'
+#' @export
+setMethod("mpMap", "ScandalMetaprograms",   function(object, ...) {
+  return (object@mpMap)
+})
+
+#'
+#' @param object a \code{ScandalMetaprograms} object.
+#' @param value a value to replace the currently set value (applies to all setter methods).
+#'
+#' @rdname ScandalMetaprograms
+#'
+#' @export
+setReplaceMethod("mpMap", c("ScandalMetaprograms", "ANY"),   function(object, ..., value) {
+  stopifnot(!is.null(value))
+  stopifnot(is.character(value))
+  stopifnot(all(names(object@metaPrograms) %in% names(value)) == TRUE)
+
+  object@mpMap <- value
+
+  colnames(object) <- unlist(lapply(strsplit(colnames(object), split = "\\."), function(x) ifelse(length(x) == 1, value[x[[1]]], paste0(value[x[[1]]], ".", x[[2]]))), recursive = FALSE)
+
+  return (object)
+})
+
+#'
+#' @rdname ScandalMetaprograms
+#'
+#' @export
+setMethod("scoringStrategy", "ScandalMetaprograms",   function(object, ...) {
+  return (object@scoringStrategy)
+})
+
+#'
+#' @rdname ScandalMetaprograms
+#'
+#' @export
+setMethod("scoreThreshold", "ScandalMetaprograms",   function(object, ...) {
+  return (object@scoreThreshold)
+})
+
+#'
+#' @rdname ScandalMetaprograms
+#'
+#' @export
+setMethod("nodeID", "ScandalMetaprograms", function(object) {
+  return(object@nodeID)
+})
+
+#'
+#' @rdname ScandalMetaprograms
+#'
+#' @export
+setMethod("projectID", "ScandalMetaprograms", function(object) {
+  return(object@projectID)
 })
 
 ### -------------------------------------------------------------------------

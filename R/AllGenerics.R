@@ -194,12 +194,39 @@ setGeneric("statsQC<-", function(object, ..., value) standardGeneric("statsQC<-"
 #' @rdname ScandalMetaprograms-generics
 #'
 #' @export
-setGeneric("mpMap", function(object, ...) standardGeneric("mpMap"))
+setGeneric("l2R", function(object, ..., as_tibble = FALSE) standardGeneric("l2R"))
 
+#'
+#' @title ScandalMetaprograms generics
+#'
 #' @rdname ScandalMetaprograms-generics
 #'
 #' @export
-setGeneric("mpMap<-", function(object, ..., value) standardGeneric("mpMap<-"))
+setGeneric("corL2R", function(object, ...) standardGeneric("corL2R"))
+
+#'
+#' @title ScandalMetaprograms generics
+#'
+#' @rdname ScandalMetaprograms-generics
+#'
+#' @export
+setGeneric("consensusClusters", function(object, ..., best = FALSE) standardGeneric("consensusClusters"))
+
+#'
+#' @title ScandalMetaprograms generics
+#'
+#' @rdname ScandalMetaprograms-generics
+#'
+#' @export
+setGeneric("mpL2R", function(object, ..., as_tibble = FALSE) standardGeneric("mpL2R"))
+
+#'
+#' @title ScandalMetaprograms generics
+#'
+#' @rdname ScandalMetaprograms-generics
+#'
+#' @export
+setGeneric("metaPrograms", function(object, ..., as_tibble = FALSE) standardGeneric("metaPrograms"))
 
 #'
 #' @title ScandalMetaprograms generics
@@ -215,4 +242,33 @@ setGeneric("mpScores", function(object, ..., as_tibble = FALSE) standardGeneric(
 #' @rdname ScandalMetaprograms-generics
 #'
 #' @export
-setGeneric("metaPrograms", function(object, ..., as_tibble = FALSE) standardGeneric("metaPrograms"))
+setGeneric("mpAssigned", function(object, ..., return_mapped = TRUE) standardGeneric("mpAssigned"))
+
+#'
+#' @title ScandalMetaprograms generics
+#'
+#' @rdname ScandalMetaprograms-generics
+#'
+#' @export
+setGeneric("mpMap", function(object, ...) standardGeneric("mpMap"))
+
+#' @rdname ScandalMetaprograms-generics
+#'
+#' @export
+setGeneric("mpMap<-", function(object, ..., value) standardGeneric("mpMap<-"))
+
+#'
+#' @title ScandalMetaprograms generics
+#'
+#' @rdname ScandalMetaprograms-generics
+#'
+#' @export
+setGeneric("scoringStrategy", function(object, ...) standardGeneric("scoringStrategy"))
+
+#'
+#' @title ScandalMetaprograms generics
+#'
+#' @rdname ScandalMetaprograms-generics
+#'
+#' @export
+setGeneric("scoreThreshold", function(object, ...) standardGeneric("scoreThreshold"))

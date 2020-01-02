@@ -9,8 +9,8 @@
 #'
 #' @export
 scandal_metaprograms <- function(object, nmf_data, samples = NULL, n_features = 500,
-                                 cc_res = NULL, maxK = 10, reps = 1000, distance = "euclidean",
-                                 n_mp_genes = 50, mpss = "ws", score_threshold = .5, verbose = FALSE) {
+                                 cc_res = NULL, maxK = 10, reps = 1000, distance = "euclidean", override_best_k = NA,
+                                 n_mp_genes = 50, mpss = "ws", score_threshold = .5, mp_map = NULL, verbose = FALSE, ...) {
 
   stopifnot(is_scandal_object(object))
   stopifnot(!is.null(nmf_data))
@@ -34,12 +34,7 @@ scandal_metaprograms <- function(object, nmf_data, samples = NULL, n_features = 
   cor_l2r <- cor(x = l2r, method = "pearson")
 
   # Run consensus clustering on the L2R correlation matrix and find the best K (number of program clusters)
-  if (is.null(cc_res))
-    cc <- .consensus_cluster(cor_l2r = cor_l2r, maxK = maxK, reps = reps, distance = distance, verbose = verbose)
-  else {
-    .msg("Got Consensus Clustering result, skipping step", verbose = verbose)
-    cc <- cc_res
-  }
+  cc <- .consensus_cluster(cor_l2r = cor_l2r, maxK = maxK, reps = reps, distance = distance, cc_res = cc_res, override_best_k = override_best_k, verbose = verbose, ...)
 
   # Plot the L2R correlation matrix
   .plot_l2r_cor(cor_l2r = cor_l2r, ccp = cc$ccp[[cc$best_k]], clusters = cc$clusters)
@@ -58,8 +53,11 @@ scandal_metaprograms <- function(object, nmf_data, samples = NULL, n_features = 
 
   #as.data.frame(mps)
 
-  # Package all the products
-  res <- list(l2r = l2r, cor_l2r = cor_l2r, cc = cc, mp_l2r = mp_l2r, mps = mps, mp_scores = mp_scores, amp = amp)
+  # Package all the products as a ScandalMetaprograms object
+  res <- ScandalMetaprograms(l2R = l2r, corL2R = cor_l2r, consensusClusters = cc,
+                             mpL2R = mp_l2r, metaPrograms = mps, mpScores = mp_scores,
+                             mpAssigned = amp, mpMap = mp_map, scoringStrategy = mpss, scoreThreshold = score_threshold,
+                             nodeID = nodeID(object), projectID = projectID(object))
 
   .msg("Done", verbose = verbose)
 
@@ -211,29 +209,47 @@ nmf_extract_programs <- function(nmf_data, n = 50, verbose = FALSE) {
   return (l2r)
 }
 
-.consensus_cluster <- function(cor_l2r, maxK, reps, distance, verbose) {
+.consensus_cluster <- function(cor_l2r, maxK, reps, distance, cc_res, override_best_k, verbose, ...) {
 
   .msg("Clustering the L2R pairwise correlation matrix", verbose = verbose)
 
-  # Compute the consensus clustering with 1-cor as the distance object
-  ccp <- ConsensusClusterPlus::ConsensusClusterPlus(d = 1 - cor_l2r, maxK = maxK, reps = reps, distance = distance)
-  icl <- ConsensusClusterPlus::calcICL(ccp)
+  if (is.null(cc_res)) {
 
-  # Compute the cluster consensus and item consensus scores for each cluster
-  ccs <- left_join(as_tibble(icl$clusterConsensus) %>% group_by(k) %>% summarise(CC = mean(clusterConsensus, na.rm = TRUE)),
-                   as_tibble(icl$itemConsensus) %>% group_by(item, k) %>% summarise(MIC = max(itemConsensus)) %>% group_by(k) %>% summarise(IC = mean(MIC, na.rm = TRUE)),
-                   by = "k")
+    # Compute the consensus clustering with 1-cor as the distance object
+    ccp <- ConsensusClusterPlus::ConsensusClusterPlus(d = 1 - cor_l2r, maxK = maxK, reps = reps, distance = distance, ...)
+    icl <- ConsensusClusterPlus::calcICL(ccp)
 
-  # If CC and IC scores agree on the same cluster then this is chosen as the best K (number of program clusters)
-  if (which.max(ccs$CC) == which.max(ccs$IC))
-    best_k <- ccs$k[which.max(ccs$CC)]
-  else {
-    best_k <- ccs$k[which.max(ccs$CC)]
+    # Compute the cluster consensus and item consensus scores for each cluster
+    ccs <- left_join(as_tibble(icl$clusterConsensus) %>% group_by(k) %>% summarise(CC = mean(clusterConsensus, na.rm = TRUE)),
+                     as_tibble(icl$itemConsensus) %>% group_by(item, k) %>% summarise(MIC = max(itemConsensus)) %>% group_by(k) %>% summarise(IC = mean(MIC, na.rm = TRUE)),
+                     by = "k")
+  } else {
 
-    .msg("No agreement between Item and Cluster Consensus scores - using Cluster Consensus score to set best K. It is adviseabele to review the clustering results", verbose = verbose)
+    .msg("Got Consensus Clustering result, skipping step", verbose = verbose)
+
+    ccp <- cc_res$ccp
+    icl <- cc_res$icl
+    ccs <- cc_res$ccs
   }
 
-  .msg(paste0("Best K set to ", best_k), verbose = verbose)
+  if (is.na(override_best_k)) {
+    # If CC and IC scores agree on the same cluster then this is chosen as the best K (number of program clusters)
+    if (which.max(ccs$CC) == which.max(ccs$IC))
+      best_k <- ccs$k[which.max(ccs$CC)]
+    else {
+      best_k <- ccs$k[which.max(ccs$CC)]
+
+      .msg("No agreement between Item and Cluster Consensus scores - using Cluster Consensus score to set best K. It is adviseabele to review the clustering results", verbose = verbose)
+    }
+
+    .msg(paste0("Best K set to ", best_k), verbose = verbose)
+
+  } else {
+
+    .msg(paste0("Overriding best K set to ", override_best_k), verbose = verbose)
+
+    best_k <- override_best_k
+  }
 
   clusters <- ccp[[best_k]]$consensusClass
 
