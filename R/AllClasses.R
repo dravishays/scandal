@@ -1052,8 +1052,7 @@ setMethod("mpMap", "ScandalMetaprograms",   function(object, ...) {
 setReplaceMethod("mpMap", c("ScandalMetaprograms", "ANY"),   function(object, ..., value) {
   stopifnot(!is.null(value))
   stopifnot(is.character(value))
-  stopifnot(length(value) == length(object@metaprograms))
-  stopifnot(names(value) == names(object@metaprograms))
+  stopifnot(all(names(object@metaprograms) %in% names(value)) == TRUE)
 
   object@mpMap <- value
 
