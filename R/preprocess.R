@@ -5,8 +5,10 @@
 #' @description Loads a dataset from file
 #'
 #' @param filename the name of the file containing the dataset (in tab-delimited
-#' format).
-#' @param type either tsv (tab-delimited text file) or rds (binary R data file).
+#' format). In case of 10x data expects a path to a folder containing the 3 output
+#' files of cellranger (barcodes, features and matrix).
+#' @param type either tsv (tab-delimited text file), rds (binary R data file) or
+#' 10x (umi counts data).
 #' Default is tsv.
 #' @param cell_2_node_map a **function** that maps a vector of cell IDs to a vector of
 #' node IDs to which the cells belong. The default function assumes that the cell ID
@@ -21,25 +23,23 @@
 #' @param as_Matrix logical indicating whether the loaded dataset should be returned
 #' as an S4 Matrix class (supports sparse representation) or base R matrix type.
 #' Default is TRUE.
+#' @param umi_to_upm Convert UMI counts to UMI per million units (e.g. CPM). Valid
+#' only for 10x data. Default is TRUE.
 #' @param verbose suppresses all messages from this function. Default is FALSE.
 #'
-#' @details
-#'
-#' @return
-#'
-#' @examples
+#' @return A matrix containing the loaded expression data.
 #'
 #' @author Avishay Spitzer
 #'
 #' @export
-load_dataset <- function(filename, type = "tsv", cell_2_node_map = DEFAULT_CELL_2_NODE_MAP, drop_cols = 1, rownames_col = 1, excluded_samples = NULL, as_Matrix = TRUE, verbose = FALSE) {
+load_dataset <- function(filename, type = "tsv", cell_2_node_map = DEFAULT_CELL_2_NODE_MAP, drop_cols = 1L, rownames_col = 1L, excluded_samples = NULL, as_Matrix = TRUE, umi_to_upm = TRUE, verbose = FALSE) {
 
-  stopifnot(is.character(filename), base::file.exists(filename))
+  stopifnot(is.character(filename), base::file.exists(filename) | base::dir.exists(filename))
   stopifnot(is.function(cell_2_node_map))
-  stopifnot(is.integer(drop_cols), is.integer(rownames_col), drop_cols > 0, rownames_col > 0)
+  stopifnot(is.integer(drop_cols), is.integer(rownames_col), drop_cols >= 0, rownames_col >= 0)
   stopifnot(is.null(excluded_samples) | (is.vector(excluded_samples) & is.character(excluded_samples)))
   stopifnot(is.logical(as_Matrix))
-  stopifnot(type %in% c("tsv", "rds"))
+  stopifnot(type %in% c("tsv", "rds", "10x"))
 
   if (isTRUE(verbose))
     message("Loading dataset from ", filename)
@@ -55,6 +55,11 @@ load_dataset <- function(filename, type = "tsv", cell_2_node_map = DEFAULT_CELL_
     colnames(dataset) <- base::gsub("\\.", "-", colnames(dataset))
   } else if (type == "rds") {
     dataset <- base::readRDS(file = filename)
+  } else if (type == "10x") {
+    dataset <- .load_umi_matrix(path = filename)
+
+    if (isTRUE(umi_to_upm))
+      dataset <- umi2upm(m = dataset)
   }
 
   if (isTRUE(verbose))
@@ -388,7 +393,7 @@ compute_complexity <- function(x, return_sorted = FALSE, cell_subset = NULL, ver
 #' calculated. Default is NULL.
 #' @param custom_hk a vector containing gene IDs which represent the housekeeping
 #' genes. If \code{NULL} (the default) then \link{SCANDAL_HOUSEKEEPING_GENES_LIST} will be used.
-#' @log Should the result be retruned in log2 space. Default is TRUE.
+#' @param log Should the result be retruned in log2 space. Default is TRUE.
 #' @param verbose suppresses all messages from this function. Default is FALSE.
 #'
 #' @return A named vector of complexity per cell ID.
@@ -824,6 +829,127 @@ scandal_inspect_samples <- function(object, sample_ids, node_id = NULL, verbose 
   node <- .assign_assay(node, x)
 
   return (node)
+}
+
+#'
+#' @title Cell QC data
+#'
+#' @description
+#'
+#' @param object a \code{ScandalDataSet} object.
+#' @param log whether the result of HK expression per cell should be returned in log space. Default is TRUE.
+#' @param verbose suppresses all messages from this function. Default is FALSE.
+#'
+#' @details
+#'
+#' @examples
+#'
+#' @author Avishay Spitzer
+#'
+#' @export
+scandal_cell_qc_data <- function(object, log = TRUE, verbose = FALSE) {
+
+  stopifnot(is_scandal_object(object))
+  stopifnot(is.logical(log))
+  stopifnot(is.logical(verbose))
+
+  res <- tibble::as_tibble(colData(object), rownames = "CellID")
+
+  res$Complexity <- compute_complexity(assay(object))
+
+  res$HK <- compute_housekeeping(assay(object), log = log)
+
+  return (res)
+}
+
+#'
+#' @title Gene QC data
+#'
+#' @description
+#'
+#' @param object a \code{ScandalDataSet} object.
+#' @param melt_result
+#' @param verbose suppresses all messages from this function. Default is FALSE.
+#'
+#' @details
+#' Expect expression data in TPM/CPM space.
+#'
+#' @examples
+#'
+#' @author Avishay Spitzer
+#'
+#' @export
+scandal_gene_qc_data <- function(object, melt_result = TRUE, verbose = FALSE) {
+
+  stopifnot(is_scandal_object(object))
+  stopifnot(is.logical(verbose))
+
+  m_all <- as.matrix(assay(object))
+
+  pconfig <- preprocConfig(object)
+
+  res <- lapply(sampleIDs(object), function(sname) {
+
+    m <- m_all[, colnames(object)[cell2SampleMap(object)(colnames(object)) == sname]]
+
+    tbl <- tibble::tibble(Gene = rownames(object),
+                          logMean = base::log2(base::rowMeans(m) + 1))
+
+    m <- base::log(x = m / scalingFactor(pconfig) + pseudoCount(pconfig), base = logBase(pconfig))
+
+    tbl$Mean <- base::rowMeans(m)
+
+    tbl$Variance <- matrixStats::rowVars(m)
+
+    tbl$SD <- base::apply(m, 1, stats::sd)
+
+    return (tbl)
+  })
+  names(res) <- sampleIDs(object)
+
+  if (isTRUE(melt_result)) {
+
+    res_melted <- do.call(rbind, lapply(names(res), function(sname) {
+      x <- res[[sname]]
+      x$Tumor <- sname
+      x
+    }))
+
+    res <- res_melted
+  }
+
+  return (res)
+}
+
+#' @author Avishay Spitzer
+#'
+#' @export
+umi2upm <- function(m) {
+
+  stopifnot(is_valid_assay(m))
+
+  count_sum <- apply(m, 2, sum)
+  m <- (t(t(m)/count_sum))*1000000
+
+  return(m)
+}
+
+.load_umi_matrix <- function(path) {
+
+  barcode.path <- paste0(path, "barcodes.tsv.gz")
+  features.path <- paste0(path, "features.tsv.gz")
+  matrix.path <- paste0(path, "matrix.mtx.gz")
+
+  mat <- Matrix::readMM(file = matrix.path)
+
+  feature.names = read.delim(features.path, header = FALSE, stringsAsFactors = FALSE)
+
+  barcode.names = read.delim(barcode.path, header = FALSE, stringsAsFactors = FALSE)
+
+  colnames(mat) = barcode.names$V1
+  rownames(mat) = feature.names$V2
+
+  return (mat)
 }
 
 .subset_cells <- function(cell_names, sample_name, map) cell_names[which(map(cell_names) %in% sample_name)]

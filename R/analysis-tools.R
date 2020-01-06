@@ -159,6 +159,7 @@ scandal_cluster_markers_density <- function(x, clusters, mname, markers, return_
 
 #' @importFrom tibble is_tibble
 #' @importFrom dplyr left_join
+#'
 #' @export
 `%MCD%` <- function(t1, t2) {
   stopifnot(is_tibble(t1), is_tibble(t2))
@@ -166,6 +167,26 @@ scandal_cluster_markers_density <- function(x, clusters, mname, markers, return_
   stopifnot(nrow(t1) == nrow(t2))
 
   return (left_join(t1, t2, by = "Cluster"))
+}
+
+#' @importFrom tibble is_tibble
+#' @importFrom dplyr left_join
+#' @importFrom methods is
+#'
+#' @export
+`%JCS%` <- function(o1, o2) {
+
+  if (is_scandal_object(o1))
+    o1 <- as_tibble(colData(o1), rownames = "CellID")
+  else if (is_tibble(o1))
+    stopifnot("CellID" %in% colnames(o1))
+
+  if (is(o2, "ScandalMetaprograms"))
+    o2 <- mpScores(o2, as_tibble = TRUE)
+  else if (is_tibble(o2))
+    stopifnot("CellID" %in% colnames(o2))
+
+  return (left_join(o1, o2, by = "CellID"))
 }
 
 .is_option_requested <- function(opts_vec, opt) (opt %in% names(opts_vec)) && (isTRUE(opts_vec[opt]))

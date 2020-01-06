@@ -976,6 +976,8 @@ DEFAULT_CELL_2_NODE_MAP <- function(cell_ids) {
 #' Besides the functionality supplied by its superclasses, \code{ScandalDataSet}
 #' supplies methods to keep
 #'
+#' @slot wsPrograms
+#' @slot wsScores
 #' @slot l2R
 #' @slot corL2R
 #' @slot consensusClusters
@@ -994,6 +996,8 @@ DEFAULT_CELL_2_NODE_MAP <- function(cell_ids) {
 #'
 #' @section Methods:
 #' \describe{
+#'   \item{\code{wsPrograms}}{Getter for the wsPrograms list}
+#'   \item{\code{wsScores}}{Getter for the wsScores list}
 #'   \item{\code{l2R}}{Getter for the l2R matrix}
 #'   \item{\code{corL2R}}{Getter for the corL2R matrix}
 #'   \item{\code{consensusClusters}}{Getter for the consensusClusters}
@@ -1017,7 +1021,8 @@ DEFAULT_CELL_2_NODE_MAP <- function(cell_ids) {
 #' @export
 #' @exportClass ScandalMetaprograms
 setClass("ScandalMetaprograms",
-         slots = c(# Add WS programs
+         slots = c(wsPrograms = "list", # Within-sample programs
+                   wsScores = "list", # Scores for the within-sample programs
                    l2R = "matrix", # Log2-ratio matrix, genes in rows, each column represents a program that came from a specific sample
                    corL2R = "matrix", # Pairwise correlation matrix computed on the L2R matrix
                    consensusClusters = "list", # List with the consensus clustering data
@@ -1043,6 +1048,8 @@ setClass("ScandalMetaprograms",
 #' ScandalMetaprograms(...)
 #'
 #' @param ... arguments to pass to the \linkS4class{DataFrame} constructor.
+#' @param wsPrograms
+#' @param wsScores
 #' @param l2R
 #' @param corL2R
 #' @param consensusClusters
@@ -1065,7 +1072,7 @@ setClass("ScandalMetaprograms",
 #' @importFrom methods new is as
 #'
 #' @export
-ScandalMetaprograms <- function(..., l2R, corL2R, consensusClusters, mpL2R, metaPrograms, mpScores, mpAssigned, mpMap, scoringStrategy, scoreThreshold, nodeID, projectID) {
+ScandalMetaprograms <- function(..., wsPrograms, wsScores, l2R, corL2R, consensusClusters, mpL2R, metaPrograms, mpScores, mpAssigned, mpMap, scoringStrategy, scoreThreshold, nodeID, projectID) {
 
   if (is.null(mpMap))
     mpMap <- c(stats::setNames(object = names(metaPrograms), nm = names(metaPrograms)), c("NA" = "NA"))
@@ -1084,6 +1091,8 @@ ScandalMetaprograms <- function(..., l2R, corL2R, consensusClusters, mpL2R, meta
   df <- DataFrame(..., df, row.names = NULL)
 
   object <- new("ScandalMetaprograms", df,
+                wsPrograms = wsPrograms,
+                wsScores = wsScores,
                 l2R = l2R,
                 corL2R = corL2R,
                 consensusClusters = consensusClusters,
@@ -1113,6 +1122,28 @@ setValidity("ScandalMetaprograms", function(object) {
     return (sprintf("consensusClusters must contain at least two element named ccp and best_k"))
 
   return (TRUE)
+})
+
+#'
+#' @rdname ScandalMetaprograms
+#'
+#' @export
+setMethod("wsPrograms", "ScandalMetaprograms",   function(object, ..., as_tibble = FALSE) {
+
+  if (isTRUE(as_tibble))
+    res <- tibble::as_tibble(unlist(object@wsPrograms, recursive = FALSE))
+  else
+    res <- object@wsPrograms
+
+  return (res)
+})
+#'
+#' @rdname ScandalMetaprograms
+#'
+#' @export
+setMethod("wsScores", "ScandalMetaprograms",   function(object, ...) {
+
+  return (object@wsScores)
 })
 
 #'

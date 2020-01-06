@@ -8,7 +8,7 @@
 #' @author Avishay Spitzer
 #'
 #' @export
-scandal_metaprograms <- function(object, nmf_data, samples = NULL, n_features = 500,
+scandal_metaprograms <- function(object, nmf_data, samples = NULL, n_wsp_genes = 50, n_features = 500,
                                  cc_res = NULL, maxK = 10, reps = 1000, distance = "euclidean", override_best_k = NA,
                                  n_mp_genes = 50, mpss = "ws", score_threshold = .5, mp_map = NULL, verbose = FALSE, ...) {
 
@@ -20,6 +20,10 @@ scandal_metaprograms <- function(object, nmf_data, samples = NULL, n_features = 
 
   if (is.null(samples))
     samples <- prepare_samples(object = object, verbose = verbose)
+
+  ws_programs <- nmf_extract_programs(nmf_data = nmf_data, n = n_wsp_genes)
+
+  ws_scores <- score_within_samples(samples = samples, ws_programs = ws_programs)
 
   # Extract the top features from all samples
   features <- .features(object = object, nmf_data = nmf_data, n_features = n_features, verbose = verbose)
@@ -54,7 +58,7 @@ scandal_metaprograms <- function(object, nmf_data, samples = NULL, n_features = 
   #as.data.frame(mps)
 
   # Package all the products as a ScandalMetaprograms object
-  res <- ScandalMetaprograms(l2R = l2r, corL2R = cor_l2r, consensusClusters = cc,
+  res <- ScandalMetaprograms(wsPrograms = ws_programs, wsScores = ws_scores, l2R = l2r, corL2R = cor_l2r, consensusClusters = cc,
                              mpL2R = mp_l2r, metaPrograms = mps, mpScores = mp_scores,
                              mpAssigned = amp, mpMap = mp_map, scoringStrategy = mpss, scoreThreshold = score_threshold,
                              nodeID = nodeID(object), projectID = projectID(object))
@@ -81,6 +85,28 @@ prepare_samples <- function(object, verbose = FALSE) {
   }), sampleIDs(object))
 
   return (samples)
+}
+
+#' @author Avishay Spitzer
+#'
+#' @importFrom stats setNames
+#'
+#' @export
+prepare_nmf_matrix <- function(samples) {
+
+  mats <- setNames(lapply(samples), function(s) as.matrix(assay(s)),
+                   nm = names(samples))
+
+  nmf_mats <- lapply(names(mats), function(n) {
+
+    m <- as.matrix(mats[[n]])
+    m <- center_matrix(m, by = "row", method = "mean", scale = FALSE)
+    m[m < 0] <- 0
+    m
+  })
+  names(nmf_mats) <- names(mats)
+
+  return (nmf_mats)
 }
 
 #' @author Avishay Spitzer

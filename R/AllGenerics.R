@@ -194,6 +194,22 @@ setGeneric("statsQC<-", function(object, ..., value) standardGeneric("statsQC<-"
 #' @rdname ScandalMetaprograms-generics
 #'
 #' @export
+setGeneric("wsPrograms", function(object, ..., as_tibble = FALSE) standardGeneric("wsPrograms"))
+
+#'
+#' @title ScandalMetaprograms generics
+#'
+#' @rdname ScandalMetaprograms-generics
+#'
+#' @export
+setGeneric("wsScores", function(object, ...) standardGeneric("wsScores"))
+
+#'
+#' @title ScandalMetaprograms generics
+#'
+#' @rdname ScandalMetaprograms-generics
+#'
+#' @export
 setGeneric("l2R", function(object, ..., as_tibble = FALSE) standardGeneric("l2R"))
 
 #'
