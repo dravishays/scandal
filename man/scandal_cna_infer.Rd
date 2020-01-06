@@ -6,8 +6,8 @@
 \usage{
 scandal_cna_infer(
   object,
-  gene_positions_table,
   reference_cells,
+  genome = "hg19",
   max_genes = 5000,
   expression_limits = c(-3, 3),
   window = 100,
@@ -20,15 +20,14 @@ scandal_cna_infer(
 \arguments{
 \item{object}{a \linkS4class{ScandalDataSet} object.}
 
-\item{gene_positions_table}{a data frame containing all genes ordered by the position
-of the gene on the chromosome and by the order of the chromosomes. The data frame should
-contain the column names "Gene" and "CHR".}
-
 \item{reference_cells}{a named vector of the cluster assignments of the reference cells.
 The names should correspond to the cell IDs of the reference (non-malignant) cells. The
 CNA matrix can be computed without a reference (with \code{reference=NULL}) but this is
 not recommended as downstream comoutations using the inferred CNA matrix will be less
 reliable.}
+
+\item{genome}{a string indicating the genome to be used for CNA inference. Must be one
+of the available genomes in the \link{infercna} package. Default is hg19.}
 
 \item{max_genes}{maximal number of genes to use for computing the CNA matrix. Default
 is 5000.}

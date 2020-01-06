@@ -6,17 +6,24 @@
 \usage{
 load_dataset(
   filename,
+  type = "tsv",
   cell_2_node_map = DEFAULT_CELL_2_NODE_MAP,
-  drop_cols = 1,
-  rownames_col = 1,
+  drop_cols = 1L,
+  rownames_col = 1L,
   excluded_samples = NULL,
   as_Matrix = TRUE,
+  umi_to_upm = TRUE,
   verbose = FALSE
 )
 }
 \arguments{
 \item{filename}{the name of the file containing the dataset (in tab-delimited
-format).}
+format). In case of 10x data expects a path to a folder containing the 3 output
+files of cellranger (barcodes, features and matrix).}
+
+\item{type}{either tsv (tab-delimited text file), rds (binary R data file) or
+10x (umi counts data).
+Default is tsv.}
 
 \item{cell_2_node_map}{a **function** that maps a vector of cell IDs to a vector of
 node IDs to which the cells belong. The default function assumes that the cell ID
@@ -36,19 +43,16 @@ should be excluded from the returned dataset. Defaults to NULL.}
 as an S4 Matrix class (supports sparse representation) or base R matrix type.
 Default is TRUE.}
 
+\item{umi_to_upm}{Convert UMI counts to UMI per million units (e.g. CPM). Valid
+only for 10x data. Default is TRUE.}
+
 \item{verbose}{suppresses all messages from this function. Default is FALSE.}
 }
 \value{
-
+A matrix containing the loaded expression data.
 }
 \description{
 Loads a dataset from file
-}
-\details{
-
-}
-\examples{
-
 }
 \author{
 Avishay Spitzer
