@@ -92,8 +92,18 @@ load_dataset <- function(filename, type = "tsv", cell_2_node_map = DEFAULT_CELL_
 #' @param forced_genes_set a vector of genes that should be included in the final
 #' processed object even if their expression is low with the exception of forced
 #' genes with absolute count equals to zero which will be filtered out. Default is NULL.
+#' @param use_complexity_filter should cells with low complexity (number of detected genes)
+#' be filtered out. Default is TRUE.
 #' @param use_housekeeping_filter should cells with low expression of house-keeping genes
 #' be filtered out. Default is FALSE.
+#' @param use_mean_exp_filter should genes with low mean expression accross all cells
+#' be filtered out. Default is TRUE.
+#' @param cell_filter_fun a function supplied to the preprocessing procedure to enable
+#' custom operations to further filter-out cells.
+#' @param cell_filter_args arguments for the custom cell filtering function.
+#' @param gene_filter_fun a function supplied to the preprocessing procedure to enable
+#' custom operations to further filter-out genes.
+#' @param gene_filter_args arguments for the custom gene filtering function.
 #' @param verbose suppresses all messages from this function. Default is FALSE.
 #'
 #' @details This function is the entry point for preprocessing a \linkS4class{ScandalDataSet}
@@ -130,13 +140,24 @@ load_dataset <- function(filename, type = "tsv", cell_2_node_map = DEFAULT_CELL_
 #' @author Avishay Spitzer
 #'
 #' @export
-scandal_preprocess <- function(object, forced_genes_set = NULL, use_housekeeping_filter = FALSE, verbose = FALSE) {
+scandal_preprocess <- function(object, forced_genes_set = NULL,
+                               use_complexity_filter = TRUE, use_housekeeping_filter = FALSE, use_mean_exp_filter = TRUE,
+                               cell_filter_fun = NULL, cell_filter_args = NULL, gene_filter_fun = NULL, gene_filter_args = NULL,
+                               verbose = FALSE) {
 
   stopifnot(is_scandal_object(object),
-            (is.null(forced_genes_set) | is.vector(forced_genes_set)),
-            is.logical(use_housekeeping_filter))
+            (is.null(forced_genes_set) | is.vector(forced_genes_set)))
+  stopifnot(is.logical(use_complexity_filter))
+  stopifnot(is.logical(use_housekeeping_filter))
+  stopifnot(is.logical(use_mean_exp_filter))
 
-  object <- .scandal_preprocess(object, forced_genes_set = forced_genes_set, use_housekeeping_filter = use_housekeeping_filter, verbose = verbose)
+  object <- .scandal_preprocess(object, forced_genes_set = forced_genes_set,
+                                use_complexity_filter = use_complexity_filter,
+                                use_housekeeping_filter = use_housekeeping_filter,
+                                use_mean_exp_filter = use_mean_exp_filter,
+                                cell_filter_fun = cell_filter_fun, cell_filter_args = cell_filter_args,
+                                gene_filter_fun = gene_filter_fun, gene_filter_args = gene_filter_args,
+                                verbose = verbose)
 
   return (object)
 }
@@ -171,8 +192,18 @@ scandal_preprocess <- function(object, forced_genes_set = NULL, use_housekeeping
 #' genes with absolute count equals to zero which will be filtered out. Default is NULL.
 #' @param sample_id an ID of the sample being processed. Used only for printing and hence
 #' is not a mandatory parameter. Default is NULL.
-#' @param use_housekeeping_filter should cells with low expression of housekeeping genes
-#' should be filtered out. Default is FALSE.
+#' @param use_complexity_filter should cells with low complexity (number of detected genes)
+#' be filtered out. Default is TRUE.
+#' @param use_housekeeping_filter should cells with low expression of house-keeping genes
+#' be filtered out. Default is FALSE.
+#' @param use_mean_exp_filter should genes with low mean expression accross all cells
+#' be filtered out. Default is TRUE.
+#' @param cell_filter_fun a function supplied to the preprocessing procedure to enable
+#' custom operations to further filter-out cells.
+#' @param cell_filter_args arguments for the custom cell filtering function.
+#' @param gene_filter_fun a function supplied to the preprocessing procedure to enable
+#' custom operations to further filter-out genes.
+#' @param gene_filter_args arguments for the custom gene filtering function.
 #' @param verbose suppresses all messages from this function. Default is FALSE.
 #'
 #' @details This function is performs the matrix preprocessing steps and is used for
@@ -205,7 +236,10 @@ scandal_preprocess <- function(object, forced_genes_set = NULL, use_housekeeping
 #'
 #' @export
 preprocess_matrix <- function(x, complexity_cutoff, expression_cutoff, housekeeping_cutoff, log_base, scaling_factor, pseudo_count,
-                              sample_id = NULL, cell_ids = NULL, gene_ids = NULL, forced_genes_set = NULL, use_housekeeping_filter = FALSE, verbose = FALSE) {
+                              sample_id = NULL, cell_ids = NULL, gene_ids = NULL, forced_genes_set = NULL,
+                              use_complexity_filter = TRUE, use_housekeeping_filter = FALSE, use_mean_exp_filter = TRUE,
+                              cell_filter_fun = NULL, cell_filter_args = NULL, gene_filter_fun = NULL, gene_filter_args = NULL,
+                              verbose = FALSE) {
 
   stopifnot(is_valid_assay(x),
             (is.vector(complexity_cutoff) & is.numeric(complexity_cutoff)),
@@ -216,8 +250,10 @@ preprocess_matrix <- function(x, complexity_cutoff, expression_cutoff, housekeep
             is.numeric(pseudo_count),
             (is.null(forced_genes_set) | is.vector(forced_genes_set)),
             (is.null(cell_ids) | is.vector(cell_ids)),
-            (is.null(gene_ids) | is.vector(gene_ids)),
-            is.logical(use_housekeeping_filter))
+            (is.null(gene_ids) | is.vector(gene_ids)))
+  stopifnot(is.logical(use_complexity_filter))
+  stopifnot(is.logical(use_housekeeping_filter))
+  stopifnot(is.logical(use_mean_exp_filter))
 
   if (isTRUE(verbose))
     message("Preprocessing sample ", sample_id, "...")
@@ -229,7 +265,16 @@ preprocess_matrix <- function(x, complexity_cutoff, expression_cutoff, housekeep
     if (isTRUE(verbose))
       message("Detecting high quality cells...")
 
-    x <- x[, filter_low_quality_cells(x, complexity_cutoff = complexity_cutoff, verbose = verbose)]
+    if (isFALSE(use_complexity_filter)) {
+      if (isTRUE(verbose))
+        message("Skipped filtering-out cells according to complexity cutoff")
+    }
+    else {
+      if (isTRUE(verbose))
+        message("Detecting low quality cells based on complexity...")
+
+      x <- x[, filter_low_quality_cells(x, complexity_cutoff = complexity_cutoff, verbose = verbose)]
+    }
 
     if (isFALSE(use_housekeeping_filter)) {
       if (isTRUE(verbose))
@@ -240,6 +285,14 @@ preprocess_matrix <- function(x, complexity_cutoff, expression_cutoff, housekeep
         message("Detecting low quality cells based on mean expression of housekeeping genes...")
 
       x <- x[, filter_low_housekeeping_cells(x, housekeeping_cutoff = housekeeping_cutoff, verbose = verbose)]
+    }
+
+    if (!is.null(cell_filter_fun)) {
+
+      if (isTRUE(verbose))
+        message("Calling custom cell filtering function...")
+
+      cell_filter_fun(cell_filter_args)
     }
   } else {
 
@@ -257,8 +310,24 @@ preprocess_matrix <- function(x, complexity_cutoff, expression_cutoff, housekeep
     if (isTRUE(verbose))
       message("Detecting highly expressed genes...")
 
-    x <- x[filter_lowly_expressed_genes(x, expression_cutoff = expression_cutoff, forced_genes_set = forced_genes_set, verbose = verbose), ]
+    if (isFALSE(use_mean_exp_filter)) {
+      if (isTRUE(verbose))
+        message("Skipped filtering-out genes according to mean expression")
+    }
+    else {
+      if (isTRUE(verbose))
+        message("Detecting lowly expressed genes based on mean expression...")
 
+      x <- x[filter_lowly_expressed_genes(x, expression_cutoff = expression_cutoff, forced_genes_set = forced_genes_set, verbose = verbose), ]
+    }
+
+    if (!is.null(gene_filter_fun)) {
+
+      if (isTRUE(verbose))
+        message("Calling custom cell filtering function...")
+
+      gene_filter_fun(gene_filter_args)
+    }
   } else {
 
     if (isTRUE(verbose))
@@ -978,7 +1047,10 @@ umi2upm <- function(m) {
             row.names = sid)
 }
 
-.scandal_preprocess <- function(object, forced_genes_set = NULL, use_housekeeping_filter = FALSE, verbose = FALSE) {
+.scandal_preprocess <- function(object, forced_genes_set = NULL,
+                                use_complexity_filter = TRUE, use_housekeeping_filter = FALSE, use_mean_exp_filter = TRUE,
+                                cell_filter_fun = NULL, cell_filter_args = NULL, gene_filter_fun = NULL, gene_filter_args = NULL,
+                                verbose = FALSE) {
 
   gconf <- preprocConfig(object)
 
@@ -1002,7 +1074,13 @@ umi2upm <- function(m) {
                            scaling_factor = scalingFactor(sconf),
                            pseudo_count = pseudoCount(sconf),
                            sample_id = sid, cell_ids = NULL,
-                           forced_genes_set = forced_genes_set, use_housekeeping_filter = use_housekeeping_filter, verbose = verbose)
+                           forced_genes_set = forced_genes_set,
+                           use_complexity_filter = use_complexity_filter,
+                           use_housekeeping_filter = use_housekeeping_filter,
+                           use_mean_exp_filter = use_mean_exp_filter,
+                           cell_filter_fun = cell_filter_fun, cell_filter_args = cell_filter_args,
+                           gene_filter_fun = gene_filter_fun, gene_filter_args = gene_filter_args,
+                           verbose = verbose)
 
     stats_qc <- .qc_stats(x_pre, x, sid)
 

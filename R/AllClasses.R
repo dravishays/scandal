@@ -903,6 +903,16 @@ setMethod("inspectSamples", "ScandalDataSet", function(object, sampleIDs, nodeID
   return(res)
 })
 
+#'
+#' @rdname ScandalDataSet
+#'
+#' @importFrom tibble as_tibble
+#' @export
+setMethod("colTbl", "ScandalDataSet", function(object, ...) {
+
+  return (as_tibble(colData(object), rownames = "CellID"))
+})
+
 ### - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 ### Display
 ###

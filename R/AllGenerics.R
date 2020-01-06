@@ -67,6 +67,11 @@ setGeneric("inspectSamples", function(object, nodeID, ...) standardGeneric("insp
 #' @export
 setGeneric("cell2SampleMap", function(object, ...) standardGeneric("cell2SampleMap"))
 
+#' @rdname ScandalDataSet-generics
+#'
+#' @export
+setGeneric("colTbl", function(object, ...) standardGeneric("colTbl"))
+
 ### =========================================================================
 ### Genercis for class ConfigParam
 ### -------------------------------------------------------------------------
