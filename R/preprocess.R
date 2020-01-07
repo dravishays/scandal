@@ -199,10 +199,12 @@ scandal_preprocess <- function(object, forced_genes_set = NULL,
 #' @param use_mean_exp_filter should genes with low mean expression accross all cells
 #' be filtered out. Default is TRUE.
 #' @param cell_filter_fun a function supplied to the preprocessing procedure to enable
-#' custom operations to further filter-out cells.
+#' custom operations to further filter-out cells. The function should receive \code{x}
+#' (the expression matrix) as the first argument.
 #' @param cell_filter_args arguments for the custom cell filtering function.
 #' @param gene_filter_fun a function supplied to the preprocessing procedure to enable
-#' custom operations to further filter-out genes.
+#' custom operations to further filter-out genes. The function should receive \code{x}
+#' (the expression matrix) as the first argument.
 #' @param gene_filter_args arguments for the custom gene filtering function.
 #' @param verbose suppresses all messages from this function. Default is FALSE.
 #'
@@ -292,7 +294,7 @@ preprocess_matrix <- function(x, complexity_cutoff, expression_cutoff, housekeep
       if (isTRUE(verbose))
         message("Calling custom cell filtering function...")
 
-      cell_filter_fun(cell_filter_args)
+      x <- cell_filter_fun(x, cell_filter_args)
     }
   } else {
 
@@ -326,7 +328,7 @@ preprocess_matrix <- function(x, complexity_cutoff, expression_cutoff, housekeep
       if (isTRUE(verbose))
         message("Calling custom cell filtering function...")
 
-      gene_filter_fun(gene_filter_args)
+      x <- gene_filter_fun(x, gene_filter_args)
     }
   } else {
 
